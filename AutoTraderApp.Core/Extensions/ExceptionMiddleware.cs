@@ -19,6 +19,12 @@ namespace AutoTraderApp.Core.Extensions
             try
             {
                 await _next(httpContext);
+
+                // Eğer status kod 403 ise özel bir mesaj dön
+                if (httpContext.Response.StatusCode == StatusCodes.Status403Forbidden)
+                {
+                    await HandleForbiddenExceptionAsync(httpContext);
+                }
             }
             catch (Exception e)
             {
@@ -48,6 +54,22 @@ namespace AutoTraderApp.Core.Extensions
                 StatusCode = httpContext.Response.StatusCode,
                 Message = message,
                 Type = type
+            });
+
+            return httpContext.Response.WriteAsync(result);
+        }
+
+        // 403 Forbidden hatası için özel bir mesaj
+        private static Task HandleForbiddenExceptionAsync(HttpContext httpContext)
+        {
+            httpContext.Response.ContentType = "application/json";
+            httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+            var result = JsonSerializer.Serialize(new ErrorDetails
+            {
+                StatusCode = StatusCodes.Status403Forbidden,
+                Message = "Bu işlem için yetkiniz yok.",
+                Type = "Forbidden"
             });
 
             return httpContext.Response.WriteAsync(result);

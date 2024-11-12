@@ -7,11 +7,6 @@ using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ValueObjects;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using AutoTraderApp.Domain.Enums;
 
 namespace AutoTraderApp.Application.Features.Auth.Commands.Register

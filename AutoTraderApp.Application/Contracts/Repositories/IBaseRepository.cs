@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 using AutoTraderApp.Domain.Common;
 
 namespace AutoTraderApp.Application.Contracts.Repositories
@@ -21,8 +16,20 @@ namespace AutoTraderApp.Application.Contracts.Repositories
             Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
             List<Expression<Func<T, object>>> includes = null,
             bool disableTracking = true);
+        Task<IReadOnlyList<T>> GetListWithStringIncludeAsync(
+            Expression<Func<T, bool>> predicate = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
+            string includeString = null,
+            bool disableTracking = true);
+
+        Task<IReadOnlyList<T>> GetListWithExpressionIncludeAsync(
+            Expression<Func<T, bool>> predicate = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
+            List<Expression<Func<T, object>>> includes = null,
+            bool disableTracking = true);
         Task<T> AddAsync(T entity);
         Task UpdateAsync(T entity);
         Task DeleteAsync(T entity);
+        Task<T> GetSingleAsync(Expression<Func<T, bool>> predicate);
     }
 }

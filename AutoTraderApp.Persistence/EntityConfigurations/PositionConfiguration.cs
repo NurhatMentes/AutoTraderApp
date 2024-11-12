@@ -32,6 +32,9 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
             .HasPrecision(18, 8)
             .IsRequired();
 
+        builder.Property(p => p.OpenedAt)
+            .IsRequired();
+
         builder.HasOne(p => p.User)
             .WithMany()
             .HasForeignKey(p => p.UserId)
@@ -40,6 +43,11 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
         builder.HasOne(p => p.BrokerAccount)
             .WithMany(ba => ba.Positions)
             .HasForeignKey(p => p.BrokerAccountId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(p => p.Instrument)
+            .WithMany()
+            .HasForeignKey(p => p.InstrumentId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(p => p.Strategy)

@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoTraderApp.Persistence",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTraderApp.WebAPI", "AutoTraderApp.WebAPI\AutoTraderApp.WebAPI.csproj", "{637CF7F2-44F8-4E5D-8125-FC2C70E9BD9D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTraderApp.Core", "AutoTraderApp.Core\AutoTraderApp.Core.csproj", "{E007EB98-1324-4058-9E2D-6BF758538B10}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,8 +41,15 @@ Global
 		{637CF7F2-44F8-4E5D-8125-FC2C70E9BD9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{637CF7F2-44F8-4E5D-8125-FC2C70E9BD9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{637CF7F2-44F8-4E5D-8125-FC2C70E9BD9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E007EB98-1324-4058-9E2D-6BF758538B10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E007EB98-1324-4058-9E2D-6BF758538B10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E007EB98-1324-4058-9E2D-6BF758538B10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E007EB98-1324-4058-9E2D-6BF758538B10}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E814F48D-128C-42A2-977B-80D345FC8D48}
 	EndGlobalSection
 EndGlobal

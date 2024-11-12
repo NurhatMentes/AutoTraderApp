@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
@@ -19,6 +20,7 @@
 	</ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AutoTraderApp.Core\AutoTraderApp.Core.csproj" />
     <ProjectReference Include="..\AutoTraderApp.Persistence\AutoTraderApp.Persistence.csproj" />
   </ItemGroup>
 

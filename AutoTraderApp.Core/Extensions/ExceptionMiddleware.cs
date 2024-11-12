@@ -20,7 +20,6 @@ namespace AutoTraderApp.Core.Extensions
             {
                 await _next(httpContext);
 
-                // Eğer status kod 403 ise özel bir mesaj dön
                 if (httpContext.Response.StatusCode == StatusCodes.Status403Forbidden)
                 {
                     await HandleForbiddenExceptionAsync(httpContext);

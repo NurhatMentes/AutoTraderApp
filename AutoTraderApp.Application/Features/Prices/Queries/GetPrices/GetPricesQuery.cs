@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using AutoTraderApp.Application.Contracts.Repositories;
+using AutoTraderApp.Application.Features.Prices.DTOs;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using MediatR;

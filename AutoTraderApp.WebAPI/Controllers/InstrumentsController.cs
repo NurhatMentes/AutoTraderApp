@@ -18,7 +18,7 @@ namespace AutoTraderApp.WebAPI.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")] 
+        //[Authorize(Roles = "Admin")] 
         public async Task<IActionResult> Create([FromBody] CreateInstrumentCommand command)
         {
             return ActionResultInstance(await _mediator.Send(command));

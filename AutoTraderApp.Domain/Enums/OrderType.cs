@@ -2,9 +2,8 @@
 
 public enum OrderType
 {
-    Market,
-    Limit,
-    StopLoss,
-    TakeProfit,
-    StopLimitOrder
+    Market = 0,
+    Limit = 1,
+    StopLimit = 2,
+    StopMarket = 3
 }

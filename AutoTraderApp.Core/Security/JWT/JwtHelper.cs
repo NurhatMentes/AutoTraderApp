@@ -35,19 +35,42 @@ namespace AutoTraderApp.Core.Security.JWT
             };
         }
 
-        public RefreshToken CreateRefreshToken(User user)
+        public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
         {
-            return new RefreshToken
+            var tokenValidationParameters = new TokenValidationParameters
             {
-                UserId = user.Id,
-                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-                Expires = DateTime.UtcNow.AddMinutes(_tokenOptions.RefreshTokenExpiration),
-                Created = DateTime.UtcNow
+                ValidateAudience = true,
+                ValidAudience = _tokenOptions.Audience,
+                ValidateIssuer = true,
+                ValidIssuer = _tokenOptions.Issuer,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = SecurityKeyHelper.CreateSecurityKey(_tokenOptions.SecurityKey),
+                ValidateLifetime = true 
             };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            try
+            {
+                var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
+
+                if (!(securityToken is JwtSecurityToken jwtSecurityToken) ||
+                    !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512Signature,
+                    StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new SecurityTokenException("Invalid token");
+                }
+
+                return principal;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         private JwtSecurityToken CreateJwtSecurityToken(TokenOptions tokenOptions, User user,
-            SigningCredentials signingCredentials, List<OperationClaim> operationClaims)
+                SigningCredentials signingCredentials, List<OperationClaim> operationClaims)
         {
             var jwt = new JwtSecurityToken(
                 issuer: tokenOptions.Issuer,

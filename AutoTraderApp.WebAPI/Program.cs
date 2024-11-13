@@ -111,6 +111,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddLogging(config =>
+{
+    config.ClearProviders();
+    config.AddConsole();
+    config.AddDebug();
+});
+
 var app = builder.Build();
 
 // Middleware

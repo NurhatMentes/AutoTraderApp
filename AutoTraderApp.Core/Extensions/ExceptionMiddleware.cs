@@ -58,7 +58,7 @@ namespace AutoTraderApp.Core.Extensions
             return httpContext.Response.WriteAsync(result);
         }
 
-        // 403 Forbidden hatası için özel bir mesaj
+
         private static Task HandleForbiddenExceptionAsync(HttpContext httpContext)
         {
             httpContext.Response.ContentType = "application/json";

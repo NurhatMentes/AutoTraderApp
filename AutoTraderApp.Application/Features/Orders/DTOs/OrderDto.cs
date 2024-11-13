@@ -4,7 +4,6 @@ namespace AutoTraderApp.Application.Features.Orders.DTOs
 {
     public class OrderDto
     {
-        public Guid Id { get; set; }
         public string InstrumentSymbol { get; set; }
         public string BrokerAccountName { get; set; }
         public OrderType Type { get; set; }
@@ -17,6 +16,7 @@ namespace AutoTraderApp.Application.Features.Orders.DTOs
         public string ExternalOrderId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public string? RejectionReason { get; set; }
     }
 
 }

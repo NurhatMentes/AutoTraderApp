@@ -19,51 +19,47 @@ public class CreateOrderCommandValidator : AbstractValidator<CreateOrderCommand>
             .GreaterThan(0)
             .WithMessage("Miktar 0'dan büyük olmalıdır");
 
-        // Market ve Limit emirler için farklı kurallar
-        When(x => x.Type == OrderType.Limit, () =>
-        {
-            RuleFor(x => x.Price)
-                .NotNull()
-                .GreaterThan(0)
-                .WithMessage("Limit emirler için fiyat belirtilmelidir");
-        });
+        RuleFor(x => x.Type)
+            .IsInEnum()
+            .WithMessage("Geçerli bir emir tipi seçiniz");
 
+        RuleFor(x => x.Side)
+            .IsInEnum()
+            .WithMessage("Geçerli bir yön seçiniz");
+
+        // Market emirleri için
         When(x => x.Type == OrderType.Market, () =>
         {
             RuleFor(x => x.Price)
                 .Null()
-                .WithMessage("Market emirler için fiyat belirtilmemelidir");
+                .WithMessage("Market emirlerde fiyat belirtilmemelidir");
         });
 
-        // Stop Loss ve Take Profit opsiyonel ama belirtilirse kontrol
+        // Limit emirleri için
+        When(x => x.Type == OrderType.Limit, () =>
+        {
+            RuleFor(x => x.Price)
+                .NotNull()
+                .WithMessage("Limit emirlerde fiyat belirtilmelidir")
+                .GreaterThan(0)
+                .WithMessage("Limit fiyatı 0'dan büyük olmalıdır");
+        });
+
+        // Stop Loss opsiyonel ama varsa
         When(x => x.StopLoss.HasValue, () =>
         {
             RuleFor(x => x.StopLoss.Value)
                 .GreaterThan(0)
                 .WithMessage("Stop loss değeri 0'dan büyük olmalıdır");
-
-            // Alış emirlerinde stop loss, fiyatın altında olmalı
-            When(x => x.Side == OrderSide.Buy && x.Price.HasValue, () =>
-            {
-                RuleFor(x => x.StopLoss.Value)
-                    .LessThan(x => x.Price.Value)
-                    .WithMessage("Alış emirlerinde stop loss, fiyatın altında olmalıdır");
-            });
         });
 
+        // Take Profit opsiyonel ama varsa
         When(x => x.TakeProfit.HasValue, () =>
         {
             RuleFor(x => x.TakeProfit.Value)
                 .GreaterThan(0)
                 .WithMessage("Take profit değeri 0'dan büyük olmalıdır");
-
-            // Alış emirlerinde take profit, fiyatın üstünde olmalı
-            When(x => x.Side == OrderSide.Buy && x.Price.HasValue, () =>
-            {
-                RuleFor(x => x.TakeProfit.Value)
-                    .GreaterThan(x => x.Price.Value)
-                    .WithMessage("Alış emirlerinde take profit, fiyatın üstünde olmalıdır");
-            });
         });
     }
 }
+

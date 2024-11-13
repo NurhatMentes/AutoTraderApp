@@ -30,7 +30,10 @@ namespace AutoTraderApp.Application.Features.Common.Behaviors
                     .ToList();
 
                 if (failures.Count != 0)
-                    throw new ValidationException(failures);
+                {
+                    var errorMessages = failures.Select(x => x.ErrorMessage).ToList();
+                    throw new ValidationException($"Validation failed: {string.Join(", ", errorMessages)}");
+                }
             }
             return await next();
         }

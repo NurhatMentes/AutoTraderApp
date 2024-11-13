@@ -16,7 +16,7 @@ public class Order : BaseEntity
     public OrderType Type { get; set; }
     public OrderSide Side { get; set; }
     public decimal Quantity { get; set; }
-    public decimal Price { get; set; }
+    public decimal? Price { get; set; }
     public decimal? StopLoss { get; set; }
     public decimal? TakeProfit { get; set; }
     public string? ExternalOrderId { get; set; }

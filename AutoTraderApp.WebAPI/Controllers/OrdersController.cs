@@ -1,9 +1,11 @@
 ﻿using AutoTraderApp.Application.Features.Orders.Commands.CancelOrder;
 using AutoTraderApp.Application.Features.Orders.Commands.CreateOrder;
+using AutoTraderApp.Application.Features.Orders.Commands.RejectOrder;
 using AutoTraderApp.Application.Features.Orders.Queries.GetOrderDetails;
 using AutoTraderApp.Application.Features.Orders.Queries.GetUserOrders;
 using AutoTraderApp.Domain.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 

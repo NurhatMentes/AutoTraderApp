@@ -4,6 +4,7 @@ using AutoTraderApp.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutoTraderApp.Persistence.Migrations
 {
     [DbContext(typeof(AutoTraderAppDbContext))]
-    partial class AutoTraderAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241113163654_UpdateOrderNullableFields")]
+    partial class UpdateOrderNullableFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -351,8 +354,7 @@ namespace AutoTraderApp.Persistence.Migrations
                         .HasColumnType("decimal(18,8)");
 
                     b.Property<string>("RejectionReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Side")
                         .HasColumnType("int");

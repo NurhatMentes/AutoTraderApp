@@ -32,6 +32,14 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
             .HasPrecision(18, 8)
             .IsRequired();
 
+        builder.Property(p => p.StopLoss)
+            .HasPrecision(18, 8)
+            .IsRequired(false); 
+
+        builder.Property(p => p.TakeProfit)
+            .HasPrecision(18, 8)
+            .IsRequired(false); 
+
         builder.Property(p => p.OpenedAt)
             .IsRequired();
 

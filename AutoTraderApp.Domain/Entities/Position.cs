@@ -24,6 +24,10 @@ public class Position : BaseEntity
     public decimal RealizedPnL { get; set; }
     public PositionSide Side { get; set; }
     public PositionStatus Status { get; set; }
+
+    public decimal? StopLoss { get; set; }
+    public decimal? TakeProfit { get; set; }
+
     public DateTime OpenedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ClosedAt { get; set; }
 

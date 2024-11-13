@@ -16,6 +16,12 @@ namespace AutoTraderApp.Application.Features.Positions.DTOs
         public PositionStatus Status { get; set; }
         public DateTime OpenedAt { get; set; }
         public DateTime? ClosedAt { get; set; }
+
+        public Guid? StrategyId { get; set; }
+        public string? StrategyName { get; set; }
+
+        public decimal? StopLoss { get; set; }
+        public decimal? TakeProfit { get; set; }
     }
 
 }

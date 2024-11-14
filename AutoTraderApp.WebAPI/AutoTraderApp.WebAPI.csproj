@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AutoTraderApp.Core\AutoTraderApp.Core.csproj" />
+    <ProjectReference Include="..\AutoTraderApp.Infrastructure\AutoTraderApp.Infrastructure.csproj" />
     <ProjectReference Include="..\AutoTraderApp.Persistence\AutoTraderApp.Persistence.csproj" />
   </ItemGroup>
 

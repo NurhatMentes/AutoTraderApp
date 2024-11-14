@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Application.Features.Orders.Commands.CancelOrder;
 using AutoTraderApp.Application.Features.Orders.Commands.CreateOrder;
+using AutoTraderApp.Application.Features.Orders.Commands.FillOrder;
 using AutoTraderApp.Application.Features.Orders.Commands.RejectOrder;
 using AutoTraderApp.Application.Features.Orders.Queries.GetOrderDetails;
 using AutoTraderApp.Application.Features.Orders.Queries.GetUserOrders;
@@ -36,6 +37,18 @@ namespace AutoTraderApp.WebAPI.Controllers
             {
                 OrderId = id,
                 UserId = GetUserId()
+            };
+            return ActionResultInstance(await _mediator.Send(command));
+        }
+
+        [HttpPost("{id}/fill")]
+        //[Authorize(Roles = "Admin")]  
+        public async Task<IActionResult> FillOrder(Guid id, [FromBody] decimal executedPrice)
+        {
+            var command = new FillOrderCommand
+            {
+                OrderId = id,
+                ExecutedPrice = executedPrice
             };
             return ActionResultInstance(await _mediator.Send(command));
         }

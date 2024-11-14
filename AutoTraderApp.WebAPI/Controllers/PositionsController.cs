@@ -1,4 +1,6 @@
 ﻿using AutoTraderApp.Application.Features.Positions.Commands.ClosePosition;
+using AutoTraderApp.Application.Features.Positions.Commands.CreatePosition;
+using AutoTraderApp.Application.Features.Positions.Commands.UpdatePositionPnL;
 using AutoTraderApp.Application.Features.Positions.Queries.GetUserPositions;
 using AutoTraderApp.Domain.Enums;
 using MediatR;
@@ -32,20 +34,36 @@ namespace AutoTraderApp.WebAPI.Controllers
             return ActionResultInstance(await _mediator.Send(command));
         }
 
+        [HttpPost]
+        public async Task<IActionResult> CreatePosition([FromBody] CreatePositionCommand command)
+        {
+            command.UserId = GetUserId();
+            return ActionResultInstance(await _mediator.Send(command));
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetPositions(
             [FromQuery] PositionStatus? status,
-            [FromQuery] PositionSide? side,
-            [FromQuery] Guid? instrumentId)
+            [FromQuery] PositionSide? side)
         {
             var query = new GetUserPositionsQuery
             {
                 UserId = GetUserId(),
                 Status = status,
-                Side = side,
-                InstrumentId = instrumentId
+                Side = side
             };
             return ActionResultInstance(await _mediator.Send(query));
+        }
+
+        [HttpPost("{id}/update-pnl")]
+        public async Task<IActionResult> UpdatePositionPnL(Guid id, [FromBody] decimal currentPrice)
+        {
+            var command = new UpdatePositionPnLCommand
+            {
+                PositionId = id,
+                CurrentPrice = currentPrice
+            };
+            return ActionResultInstance(await _mediator.Send(command));
         }
     }
 }

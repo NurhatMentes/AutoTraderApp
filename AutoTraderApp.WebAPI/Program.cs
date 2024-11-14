@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
+using AutoTraderApp.Infrastructure.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -117,6 +118,9 @@ builder.Services.AddLogging(config =>
     config.AddConsole();
     config.AddDebug();
 });
+
+builder.Services.AddHostedService<PositionUpdateService>();
+
 
 var app = builder.Build();
 

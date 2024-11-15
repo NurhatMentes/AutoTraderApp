@@ -11,9 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoTraderApp.Infrastructur
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoTraderApp.Persistence", "AutoTraderApp.Persistence\AutoTraderApp.Persistence.csproj", "{7F2A7897-FDA5-4CA6-8E2B-D499F2EFF6D9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTraderApp.WebAPI", "AutoTraderApp.WebAPI\AutoTraderApp.WebAPI.csproj", "{637CF7F2-44F8-4E5D-8125-FC2C70E9BD9D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoTraderApp.WebAPI", "AutoTraderApp.WebAPI\AutoTraderApp.WebAPI.csproj", "{637CF7F2-44F8-4E5D-8125-FC2C70E9BD9D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTraderApp.Core", "AutoTraderApp.Core\AutoTraderApp.Core.csproj", "{E007EB98-1324-4058-9E2D-6BF758538B10}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoTraderApp.Core", "AutoTraderApp.Core\AutoTraderApp.Core.csproj", "{E007EB98-1324-4058-9E2D-6BF758538B10}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

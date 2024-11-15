@@ -12,14 +12,16 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 using AutoTraderApp.Infrastructure.BackgroundServices;
+using AutoTraderApp.Infrastructure.DependencyResolvers.Autofac;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Autofac Provider
 builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
+builder.Host.ConfigureContainer<ContainerBuilder>(builder =>
 {
-    containerBuilder.RegisterModule(new CoreModule());
+    builder.RegisterModule(new CoreModule());
+    builder.RegisterModule(new AutofacInfrastructureModule());
 });
 
 

@@ -1,4 +1,5 @@
 ﻿using AutoTraderApp.Application.Contracts.Repositories;
+using AutoTraderApp.Application.Interfaces;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.Enums;
@@ -20,14 +21,17 @@ namespace AutoTraderApp.Application.Features.Positions.Commands.CreatePosition
         private readonly IBaseRepository<Position> _positionRepository;
         private readonly IBaseRepository<Order> _orderRepository;
         private readonly ILogger<CreatePositionCommandHandler> _logger;
+        private readonly IMarketDataService _marketDataService;
 
         public CreatePositionCommandHandler(
             IBaseRepository<Position> positionRepository,
             IBaseRepository<Order> orderRepository,
-            ILogger<CreatePositionCommandHandler> logger)
+            ILogger<CreatePositionCommandHandler> logger,
+            IMarketDataService marketDataService)
         {
             _positionRepository = positionRepository;
             _orderRepository = orderRepository;
+            _marketDataService = marketDataService;
             _logger = logger;
         }
 
@@ -50,7 +54,10 @@ namespace AutoTraderApp.Application.Features.Positions.Commands.CreatePosition
                 if (orderEntity.Status != OrderStatus.Filled)
                     return new ErrorResult("Bu emir henüz gerçekleşmemiş");
 
-                // Mevcut açık pozisyonu kontrol et
+                var currentPrice = await _marketDataService.GetCurrentPrice(orderEntity.Instrument.Symbol);
+                if (!currentPrice.HasValue)
+                    return new ErrorResult($"{orderEntity.Instrument.Symbol} için fiyat verisi alınamadı");
+
                 var existingPosition = await _positionRepository.GetSingleAsync(p =>
                     p.InstrumentId == orderEntity.InstrumentId &&
                     p.UserId == request.UserId &&
@@ -58,23 +65,39 @@ namespace AutoTraderApp.Application.Features.Positions.Commands.CreatePosition
 
                 if (existingPosition != null)
                 {
+                    _logger.LogInformation($"Existing position found: {existingPosition.Id}");
+
                     // Aynı yönde ise pozisyonu güncelle
                     if (existingPosition.Side == (orderEntity.Side == OrderSide.Buy ? PositionSide.Long : PositionSide.Short))
                     {
-                        existingPosition.Quantity += orderEntity.Quantity;
-                        existingPosition.EntryPrice = ((existingPosition.EntryPrice * (existingPosition.Quantity - orderEntity.Quantity)) +
-                            (orderEntity.Price ?? 0) * orderEntity.Quantity) / existingPosition.Quantity;
+                        decimal totalQuantity = existingPosition.Quantity + orderEntity.Quantity;
+                        decimal newEntryPrice = ((existingPosition.EntryPrice * existingPosition.Quantity) +
+                            (orderEntity.Price ?? currentPrice.Value) * orderEntity.Quantity) / totalQuantity;
+
+                        existingPosition.Quantity = totalQuantity;
+                        existingPosition.EntryPrice = newEntryPrice;
+                        existingPosition.CurrentPrice = currentPrice.Value;
+                        existingPosition.UnrealizedPnL = CalculateUnrealizedPnL(
+                            existingPosition.Side,
+                            existingPosition.EntryPrice,
+                            currentPrice.Value,
+                            existingPosition.Quantity);
 
                         await _positionRepository.UpdateAsync(existingPosition);
                         return new SuccessResult($"Mevcut pozisyon güncellendi. Pozisyon ID: {existingPosition.Id}");
                     }
                     else
                     {
+                        // Ters yönde ise pozisyonu kapat veya azalt
                         if (orderEntity.Quantity >= existingPosition.Quantity)
                         {
                             existingPosition.Status = PositionStatus.Closed;
                             existingPosition.ClosedAt = DateTime.UtcNow;
-                            existingPosition.RealizedPnL = CalculateRealizedPnL(existingPosition, orderEntity);
+                            existingPosition.RealizedPnL = CalculateRealizedPnL(
+                                existingPosition.Side,
+                                existingPosition.EntryPrice,
+                                currentPrice.Value,
+                                existingPosition.Quantity);
 
                             await _positionRepository.UpdateAsync(existingPosition);
                             return new SuccessResult($"Pozisyon kapatıldı. Pozisyon ID: {existingPosition.Id}");
@@ -82,6 +105,12 @@ namespace AutoTraderApp.Application.Features.Positions.Commands.CreatePosition
                         else
                         {
                             existingPosition.Quantity -= orderEntity.Quantity;
+                            existingPosition.RealizedPnL = CalculateRealizedPnL(
+                                existingPosition.Side,
+                                existingPosition.EntryPrice,
+                                currentPrice.Value,
+                                orderEntity.Quantity);
+
                             await _positionRepository.UpdateAsync(existingPosition);
                             return new SuccessResult($"Pozisyon güncellendi. Pozisyon ID: {existingPosition.Id}");
                         }
@@ -94,11 +123,11 @@ namespace AutoTraderApp.Application.Features.Positions.Commands.CreatePosition
                     InstrumentId = orderEntity.InstrumentId,
                     BrokerAccountId = orderEntity.BrokerAccountId,
                     Quantity = orderEntity.Quantity,
-                    EntryPrice = orderEntity.Price ?? 0,
-                    CurrentPrice = orderEntity.Price ?? 0,
+                    EntryPrice = orderEntity.Price ?? currentPrice.Value,
+                    CurrentPrice = currentPrice.Value,
                     Side = orderEntity.Side == OrderSide.Buy ? PositionSide.Long : PositionSide.Short,
                     Status = PositionStatus.Open,
-                    UnrealizedPnL = 0,
+                    UnrealizedPnL = 0, // Yeni pozisyon için başlangıç PnL'i 0
                     RealizedPnL = 0,
                     StopLoss = orderEntity.StopLoss,
                     TakeProfit = orderEntity.TakeProfit
@@ -111,19 +140,23 @@ namespace AutoTraderApp.Application.Features.Positions.Commands.CreatePosition
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error creating position: {ex}");
+                _logger.LogError(ex, "Error creating position");
                 return new ErrorResult("Pozisyon oluşturulurken bir hata oluştu");
             }
         }
 
-        private decimal CalculateRealizedPnL(Position position, Order closingOrder)
+        private decimal CalculateUnrealizedPnL(PositionSide side, decimal entryPrice, decimal currentPrice, decimal quantity)
         {
-            var closingPrice = closingOrder.Price ?? 0;
-            if (position.Side == PositionSide.Long)
-            {
-                return (closingPrice - position.EntryPrice) * position.Quantity;
-            }
-            return (position.EntryPrice - closingPrice) * position.Quantity;
+            return side == PositionSide.Long
+                ? (currentPrice - entryPrice) * quantity
+                : (entryPrice - currentPrice) * quantity;
+        }
+
+        private decimal CalculateRealizedPnL(PositionSide side, decimal entryPrice, decimal exitPrice, decimal quantity)
+        {
+            return side == PositionSide.Long
+                ? (exitPrice - entryPrice) * quantity
+                : (entryPrice - exitPrice) * quantity;
         }
     }
 }

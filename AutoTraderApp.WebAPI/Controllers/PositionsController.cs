@@ -21,15 +21,12 @@ namespace AutoTraderApp.WebAPI.Controllers
         }
 
         [HttpPost("{id}/close")]
-        public async Task<IActionResult> ClosePosition(
-            Guid id,
-            [FromBody] decimal? closePrice = null)
+        public async Task<IActionResult> ClosePosition(Guid id)
         {
             var command = new ClosePositionCommand
             {
                 PositionId = id,
-                UserId = GetUserId(),
-                ClosePrice = closePrice
+                UserId = GetUserId()
             };
             return ActionResultInstance(await _mediator.Send(command));
         }

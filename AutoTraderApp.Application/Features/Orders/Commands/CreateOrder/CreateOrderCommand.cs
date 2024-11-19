@@ -1,4 +1,5 @@
 ﻿using AutoTraderApp.Application.Contracts.Repositories;
+using AutoTraderApp.Application.Interfaces;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.Enums;
@@ -20,23 +21,25 @@ namespace AutoTraderApp.Application.Features.Orders.Commands.CreateOrder
         public decimal? StopLoss { get; set; }
         public decimal? TakeProfit { get; set; }
     }
-
-    public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, IResult>
+public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, IResult>
     {
         private readonly IBaseRepository<Order> _orderRepository;
         private readonly IBaseRepository<Instrument> _instrumentRepository;
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
+        private readonly IMarketDataService _marketDataService;
         private readonly ILogger<CreateOrderCommandHandler> _logger;
 
         public CreateOrderCommandHandler(
             IBaseRepository<Order> orderRepository,
             IBaseRepository<Instrument> instrumentRepository,
             IBaseRepository<BrokerAccount> brokerAccountRepository,
+            IMarketDataService marketDataService,
             ILogger<CreateOrderCommandHandler> logger)
         {
             _orderRepository = orderRepository;
             _instrumentRepository = instrumentRepository;
             _brokerAccountRepository = brokerAccountRepository;
+            _marketDataService = marketDataService;
             _logger = logger;
         }
 
@@ -46,73 +49,36 @@ namespace AutoTraderApp.Application.Features.Orders.Commands.CreateOrder
             {
                 _logger.LogInformation($"Creating order: {JsonSerializer.Serialize(request)}");
 
-                // 1. Enstrüman kontrolü
                 var instrument = await _instrumentRepository.GetByIdAsync(request.InstrumentId);
                 if (instrument == null)
-                {
-                    _logger.LogWarning($"Invalid instrument ID: {request.InstrumentId}");
                     return new ErrorResult("Geçersiz enstrüman");
-                }
 
-                // 2. Broker hesap kontrolü
                 var brokerAccount = await _brokerAccountRepository.GetByIdAsync(request.BrokerAccountId);
                 if (brokerAccount == null)
-                {
-                    _logger.LogWarning($"Invalid broker account ID: {request.BrokerAccountId}");
                     return new ErrorResult("Geçersiz broker hesabı");
-                }
 
-                // 3. Hesap yetki kontrolü
                 if (brokerAccount.UserId != request.UserId)
-                {
-                    _logger.LogWarning($"User {request.UserId} tried to access broker account {request.BrokerAccountId}");
                     return new ErrorResult("Bu broker hesabına erişim yetkiniz yok");
-                }
 
-                // 4. İşlem miktarı kontrolü
+                // Market fiyatını al
+                var currentPrice = await _marketDataService.GetCurrentPrice(instrument.Symbol);
+                if (!currentPrice.HasValue)
+                    return new ErrorResult("Fiyat bilgisi alınamadı");
+
+                decimal orderPrice = request.Type == OrderType.Market ? currentPrice.Value : request.Price ?? currentPrice.Value;
+
                 if (request.Quantity < instrument.MinTradeAmount || request.Quantity > instrument.MaxTradeAmount)
                 {
-                    var order = new Order
-                    {
-                        UserId = request.UserId,
-                        InstrumentId = request.InstrumentId,
-                        BrokerAccountId = request.BrokerAccountId,
-                        Type = request.Type,
-                        Side = request.Side,
-                        Quantity = request.Quantity,
-                        Price = request.Price,
-                        StopLoss = request.StopLoss,
-                        TakeProfit = request.TakeProfit,
-                        Status = OrderStatus.Rejected,
-                        RejectionReason = $"İşlem miktarı limitlerin dışında. Min: {instrument.MinTradeAmount}, Max: {instrument.MaxTradeAmount}"
-                    };
-                    await _orderRepository.AddAsync(order);
-                    return new ErrorResult(order.RejectionReason);
+                    return await CreateRejectedOrder(request, instrument, $"İşlem miktarı limitlerin dışında. Min: {instrument.MinTradeAmount}, Max: {instrument.MaxTradeAmount}");
                 }
 
-                // 5. Bakiye kontrolü (Market emirler için anlık fiyat, Limit emirler için limit fiyatı kullanılır)
-                decimal requiredAmount = request.Quantity * (request.Price ?? 0); // Gerçek uygulamada market fiyatı servisten alınmalı
+                decimal requiredAmount = request.Quantity * orderPrice;
                 if (brokerAccount.Balance < requiredAmount)
                 {
-                    var order = new Order
-                    {
-                        UserId = request.UserId,
-                        InstrumentId = request.InstrumentId,
-                        BrokerAccountId = request.BrokerAccountId,
-                        Type = request.Type,
-                        Side = request.Side,
-                        Quantity = request.Quantity,
-                        Price = request.Price,
-                        StopLoss = request.StopLoss,
-                        TakeProfit = request.TakeProfit,
-                        Status = OrderStatus.Rejected,
-                        RejectionReason = $"Yetersiz bakiye. Gerekli: {requiredAmount}, Mevcut: {brokerAccount.Balance}"
-                    };
-                    await _orderRepository.AddAsync(order);
-                    return new ErrorResult(order.RejectionReason);
+                    return await CreateRejectedOrder(request, instrument, $"Yetersiz bakiye. Gerekli: {requiredAmount}, Mevcut: {brokerAccount.Balance}");
                 }
 
-                var successfulOrder = new Order
+                var order = new Order
                 {
                     UserId = request.UserId,
                     InstrumentId = request.InstrumentId,
@@ -120,22 +86,51 @@ namespace AutoTraderApp.Application.Features.Orders.Commands.CreateOrder
                     Type = request.Type,
                     Side = request.Side,
                     Quantity = request.Quantity,
-                    Price = request.Price,
+                    Price = orderPrice,
                     StopLoss = request.StopLoss,
                     TakeProfit = request.TakeProfit,
                     Status = OrderStatus.Created
                 };
 
-                await _orderRepository.AddAsync(successfulOrder);
-                _logger.LogInformation($"Order created successfully: {successfulOrder.Id}");
+                await _orderRepository.AddAsync(order);
+                _logger.LogInformation($"Order created successfully: {order.Id}");
 
-                return new SuccessResult($"Emir başarıyla oluşturuldu. Emir ID: {successfulOrder.Id}");
+                // Market emri ise Pending statüsüne çek
+                // Broker entegrasyonu yapıldığında burada broker'a gönderilecek
+                if (request.Type == OrderType.Market)
+                {
+                    order.Status = OrderStatus.Pending;
+                    await _orderRepository.UpdateAsync(order);
+                    _logger.LogInformation($"Market order status updated to Pending: {order.Id}");
+                }
+
+                return new SuccessResult($"Emir başarıyla oluşturuldu. Emir ID: {order.Id}");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error creating order: {ex}");
                 return new ErrorResult("Emir oluşturulurken bir hata oluştu");
             }
+        }
+
+        private async Task<IResult> CreateRejectedOrder(CreateOrderCommand request, Instrument instrument, string reason)
+        {
+            var order = new Order
+            {
+                UserId = request.UserId,
+                InstrumentId = request.InstrumentId,
+                BrokerAccountId = request.BrokerAccountId,
+                Type = request.Type,
+                Side = request.Side,
+                Quantity = request.Quantity,
+                Price = request.Price,
+                StopLoss = request.StopLoss,
+                TakeProfit = request.TakeProfit,
+                Status = OrderStatus.Rejected,
+                RejectionReason = reason
+            };
+            await _orderRepository.AddAsync(order);
+            return new ErrorResult(reason);
         }
     }
 }

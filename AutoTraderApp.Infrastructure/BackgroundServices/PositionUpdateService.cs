@@ -1,12 +1,13 @@
 ﻿using AutoTraderApp.Application.Contracts.Repositories;
 using AutoTraderApp.Application.Features.Positions.Commands.UpdatePositionPnL;
+using AutoTraderApp.Application.Interfaces;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.Enums;
+using AutoTraderApp.Infrastructure.MarketData.Models;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-
 
 namespace AutoTraderApp.Infrastructure.BackgroundServices
 {
@@ -33,6 +34,8 @@ namespace AutoTraderApp.Infrastructure.BackgroundServices
                     {
                         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
                         var positionRepository = scope.ServiceProvider.GetRequiredService<IBaseRepository<Position>>();
+                        var marketDataService = scope.ServiceProvider.GetRequiredService<IMarketDataService>();
+                        var instrumentRepository = scope.ServiceProvider.GetRequiredService<IBaseRepository<Instrument>>();
 
                         // Açık pozisyonları getir
                         var openPositions = await positionRepository.GetListWithStringIncludeAsync(
@@ -40,33 +43,43 @@ namespace AutoTraderApp.Infrastructure.BackgroundServices
 
                         foreach (var position in openPositions)
                         {
-                            // Gerçek uygulamada burası market data service'den güncel fiyatı alacak
-                            decimal currentPrice = await GetCurrentPrice(position.InstrumentId);
+                            // Enstrümanın sembolünü al
+                            var instrument = await instrumentRepository.GetByIdAsync(position.InstrumentId);
+                            if (instrument == null)
+                            {
+                                _logger.LogWarning($"Enstrüman bulunamadı. InstrumentId: {position.InstrumentId}");
+                                continue;
+                            }
+
+                            decimal? currentPrice = await marketDataService.GetCurrentPrice(instrument.Symbol);
+                            if (!currentPrice.HasValue)
+                            {
+                                _logger.LogWarning($"Güncel fiyat alınamadı. Sembol: {instrument.Symbol}");
+                                continue;
+                            }
+
+                            _logger.LogInformation($"Pozisyon güncelleniyor. PositionId: {position.Id}, CurrentPrice: {currentPrice}");
+
 
                             var command = new UpdatePositionPnLCommand
                             {
                                 PositionId = position.Id,
-                                CurrentPrice = currentPrice
+                                CurrentPrice = currentPrice.Value
                             };
 
                             await mediator.Send(command);
                         }
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                    // Servisin güncelleme sıklığı
+                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error updating positions");
+                    _logger.LogError(ex, "Pozisyonlar güncellenirken hata oluştu.");
                     await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
                 }
             }
-        }
-
-        private async Task<decimal> GetCurrentPrice(Guid instrumentId)
-        {
-            // Gerçek uygulamada burası market data service'e bağlanacak
-            return 0; // Şimdilik dummy değer
         }
     }
 }

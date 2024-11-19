@@ -15,6 +15,5 @@ public class Strategy : BaseEntity
     public decimal StopLossPercentage { get; set; }
     public decimal TakeProfitPercentage { get; set; }
 
-    // Navigation properties
     public ICollection<TradingRule> TradingRules { get; set; } = new List<TradingRule>();
 }

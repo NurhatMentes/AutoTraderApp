@@ -1,4 +1,4 @@
-﻿using AutoTraderApp.Application.Contracts.Repositories;
+﻿using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Persistence.Context;
 

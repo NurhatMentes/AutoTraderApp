@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AutoTraderApp.Core\AutoTraderApp.Core.csproj" />
     <ProjectReference Include="..\AutoTraderApp.Domain\AutoTraderApp.Domain.csproj" />
+    <ProjectReference Include="..\AutoTraderApp.Infrastructure\AutoTraderApp.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

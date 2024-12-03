@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using AutoTraderApp.Application.Contracts.Repositories;
+using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Application.Features.Auth.Models;
 using AutoTraderApp.Application.Features.Common.AutoTraderApp.Application.Features.Common;
 using AutoTraderApp.Core.Aspects.Autofac.Caching;
@@ -7,7 +7,7 @@ using AutoTraderApp.Core.Aspects.Autofac.Validation;
 using AutoTraderApp.Core.Constants;
 using AutoTraderApp.Core.Security.Hashing;
 using AutoTraderApp.Core.Security.JWT;
-using AutoTraderApp.Core.Utilities.Results;
+using AutoTraderApp.Core.Utilities.Results;             
 using MediatR;
 
 namespace AutoTraderApp.Application.Features.Auth.Commands.Login

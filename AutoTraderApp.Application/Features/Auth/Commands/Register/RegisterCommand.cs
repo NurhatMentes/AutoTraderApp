@@ -1,4 +1,4 @@
-﻿using AutoTraderApp.Application.Contracts.Repositories;
+﻿using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Application.Features.Common.AutoTraderApp.Application.Features.Common;
 using AutoTraderApp.Core.Aspects.Autofac.Validation;
 using AutoTraderApp.Core.Constants;

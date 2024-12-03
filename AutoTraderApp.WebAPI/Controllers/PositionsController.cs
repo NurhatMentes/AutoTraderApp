@@ -1,8 +1,5 @@
-﻿using AutoTraderApp.Application.Features.Positions.Commands.ClosePosition;
-using AutoTraderApp.Application.Features.Positions.Commands.CreatePosition;
-using AutoTraderApp.Application.Features.Positions.Commands.UpdatePositionPnL;
-using AutoTraderApp.Application.Features.Positions.Queries.GetUserPositions;
-using AutoTraderApp.Domain.Enums;
+﻿using AutoTraderApp.Application.Features.Position.Commands.ClosePosition;
+using AutoTraderApp.Application.Features.Position.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,47 +17,27 @@ namespace AutoTraderApp.WebAPI.Controllers
             _mediator = mediator;
         }
 
-        [HttpPost("{id}/close")]
-        public async Task<IActionResult> ClosePosition(Guid id)
-        {
-            var command = new ClosePositionCommand
-            {
-                PositionId = id,
-                UserId = GetUserId()
-            };
-            return ActionResultInstance(await _mediator.Send(command));
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CreatePosition([FromBody] CreatePositionCommand command)
-        {
-            command.UserId = GetUserId();
-            return ActionResultInstance(await _mediator.Send(command));
-        }
-
         [HttpGet]
-        public async Task<IActionResult> GetPositions(
-            [FromQuery] PositionStatus? status,
-            [FromQuery] PositionSide? side)
+        public async Task<IActionResult> GetPositions()
         {
-            var query = new GetUserPositionsQuery
-            {
-                UserId = GetUserId(),
-                Status = status,
-                Side = side
-            };
-            return ActionResultInstance(await _mediator.Send(query));
+            var result = await _mediator.Send(new GetPositionsQuery());
+            if (result.Success)
+                return Ok(result);
+            return BadRequest(result);
         }
 
-        [HttpPost("{id}/update-pnl")]
-        public async Task<IActionResult> UpdatePositionPnL(Guid id, [FromBody] decimal currentPrice)
+        [HttpGet("open")]
+        public async Task<IActionResult> GetOpenPositions()
         {
-            var command = new UpdatePositionPnLCommand
-            {
-                PositionId = id,
-                CurrentPrice = currentPrice
-            };
-            return ActionResultInstance(await _mediator.Send(command));
+            var result = await _mediator.Send(new GetPositionsQuery());
+            return Ok(result);
+        }
+
+        [HttpPost("close")]
+        public async Task<IActionResult> ClosePosition([FromBody] ClosePositionCommand request)
+        {
+            var result = await _mediator.Send(request);
+            return Ok(result);
         }
     }
 }

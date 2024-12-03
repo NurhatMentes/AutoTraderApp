@@ -23,42 +23,6 @@ public static class DataSeeder
             Console.WriteLine("OperationClaims seed başarılı.");
         }
 
-        // Instruments Seed
-        if (!context.Instruments.Any())
-        {
-            var instruments = new List<Instrument>
-            {
-                new()
-                {
-                    Id = Guid.NewGuid(),
-                    Symbol = "AAPL",
-                    Name = "Apple Inc.",
-                    Type = InstrumentType.Stock,
-                    Exchange = "NASDAQ",
-                    MinTradeAmount = 1,
-                    MaxTradeAmount = 10000,
-                    PriceDecimalPlaces = 2,
-                    Status = InstrumentStatus.Active,
-                    CreatedByUserId = Guid.Empty
-                },
-                new()
-                {
-                    Id = Guid.NewGuid(),
-                    Symbol = "BTCUSD",
-                    Name = "Bitcoin/USD",
-                    Type = InstrumentType.Crypto,
-                    Exchange = "Binance",
-                    MinTradeAmount = 0.0001m,
-                    MaxTradeAmount = 100,
-                    PriceDecimalPlaces = 8,
-                    Status = InstrumentStatus.Active,
-                    CreatedByUserId = Guid.Empty
-                }
-            };
-
-            await context.Instruments.AddRangeAsync(instruments);
-            Console.WriteLine("Instruments seed başarılı.");
-        }
 
         await context.SaveChangesAsync();
         Console.WriteLine("Veritabanı seed işlemleri tamamlandı.");

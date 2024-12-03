@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using AutoTraderApp.Application.Contracts.Repositories;
+using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Persistence.Repositories;
 using AutoTraderApp.Persistence.Seeds;
 

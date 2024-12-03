@@ -11,11 +11,10 @@ namespace AutoTraderApp.Persistence
         {
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .Build();
 
             var builder = new DbContextOptionsBuilder<AutoTraderAppDbContext>();
-
             var connectionString = configuration.GetConnectionString("DefaultConnection");
 
             builder.UseSqlServer(connectionString);

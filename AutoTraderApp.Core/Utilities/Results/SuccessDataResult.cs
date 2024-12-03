@@ -7,7 +7,7 @@ public class SuccessDataResult<T> : DataResult<T>
     {
     }
 
-    public SuccessDataResult(T data)
+    public SuccessDataResult(string v, T data)
         : base(data, true, null, 200)
     {
     }

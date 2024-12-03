@@ -1,35 +1,18 @@
 ﻿using AutoTraderApp.Domain.Common;
-using AutoTraderApp.Domain.Enums;
 
 namespace AutoTraderApp.Domain.Entities;
 
 public class Position : BaseEntity
 {
-    public Guid UserId { get; set; }
-    public User User { get; set; } = null!;
-
-    public Guid BrokerAccountId { get; set; }
-    public BrokerAccount BrokerAccount { get; set; } = null!;
-
-    public Guid InstrumentId { get; set; }
-    public Instrument Instrument { get; set; } = null!;
-
-    public Guid? StrategyId { get; set; }
-    public Strategy? Strategy { get; set; }
-
-    public decimal Quantity { get; set; }
-    public decimal EntryPrice { get; set; }
-    public decimal CurrentPrice { get; set; }
-    public decimal UnrealizedPnL { get; set; }
-    public decimal RealizedPnL { get; set; }
-    public PositionSide Side { get; set; }
-    public PositionStatus Status { get; set; }
-
-    public decimal? StopLoss { get; set; }
-    public decimal? TakeProfit { get; set; }
-
-    public DateTime OpenedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? ClosedAt { get; set; }
-
-    public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public string Symbol { get; set; } // Örn: "AAPL"
+    public decimal Quantity { get; set; } // Pozisyondaki miktar
+    public decimal CurrentPrice { get; set; } // Şu anki fiyat
+    public decimal EntryPrice { get; set; } // Ortalama giriş fiyatı
+    public decimal MarketValue { get; set; } // Pozisyonun piyasa değeri
+    public decimal CostBasis { get; set; } // Ortalama maliyet
+    public decimal UnrealizedPnL { get; set; } // Gerçekleşmemiş kar/zarar
+    public decimal UnrealizedPnLPercentage { get; set; } // Gerçekleşmemiş kar/zarar yüzdesi
+    public decimal RealizedPnL { get; set; } // Gerçekleşmiş kar/zarar
+    public decimal TodayChange { get; set; } // Günlük değişim yüzdesi
+    public bool IsOpen { get; set; } = true; // Pozisyon açık mı kapalı mı
 }

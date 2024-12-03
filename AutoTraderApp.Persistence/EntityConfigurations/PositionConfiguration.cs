@@ -9,58 +9,7 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
     public void Configure(EntityTypeBuilder<Position> builder)
     {
         builder.ToTable("Positions");
-
         builder.HasKey(p => p.Id);
-
-        builder.Property(p => p.Quantity)
-            .HasPrecision(18, 8)
-            .IsRequired();
-
-        builder.Property(p => p.EntryPrice)
-            .HasPrecision(18, 8)
-            .IsRequired();
-
-        builder.Property(p => p.CurrentPrice)
-            .HasPrecision(18, 8)
-            .IsRequired();
-
-        builder.Property(p => p.UnrealizedPnL)
-            .HasPrecision(18, 8)
-            .IsRequired();
-
-        builder.Property(p => p.RealizedPnL)
-            .HasPrecision(18, 8)
-            .IsRequired();
-
-        builder.Property(p => p.StopLoss)
-            .HasPrecision(18, 8)
-            .IsRequired(false); 
-
-        builder.Property(p => p.TakeProfit)
-            .HasPrecision(18, 8)
-            .IsRequired(false); 
-
-        builder.Property(p => p.OpenedAt)
-            .IsRequired();
-
-        builder.HasOne(p => p.User)
-            .WithMany()
-            .HasForeignKey(p => p.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(p => p.BrokerAccount)
-            .WithMany(ba => ba.Positions)
-            .HasForeignKey(p => p.BrokerAccountId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(p => p.Instrument)
-            .WithMany()
-            .HasForeignKey(p => p.InstrumentId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(p => p.Strategy)
-            .WithMany()
-            .HasForeignKey(p => p.StrategyId)
-            .OnDelete(DeleteBehavior.Restrict);
+        builder.Property(p => p.Symbol).IsRequired().HasMaxLength(50);
     }
 }

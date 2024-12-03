@@ -22,115 +22,6 @@ namespace AutoTraderApp.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Alert", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Condition")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("InstrumentId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastTriggered")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("TriggerValue")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InstrumentId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Alerts", (string)null);
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.BacktestResult", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("FinalCapital")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("InitialCapital")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("MaxDrawdown")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Parameters")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("SharpeRatio")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("StrategyId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("TotalReturn")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("TotalTrades")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("WinRate")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StrategyId");
-
-                    b.ToTable("BacktestResults");
-                });
-
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -161,19 +52,13 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("IsPaperTrading")
+                    b.Property<bool>("IsPaper")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -191,11 +76,14 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.ToTable("BrokerAccounts", (string)null);
                 });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Instrument", b =>
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.ClosedPosition", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ClosedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -203,37 +91,15 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Exchange")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<decimal>("MaxTradeAmount")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<decimal>("MinTradeAmount")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("PriceDecimalPlaces")
+                    b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                    b.Property<decimal>("RealizedPnL")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Symbol")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -243,48 +109,7 @@ namespace AutoTraderApp.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Instruments", (string)null);
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.NotificationSetting", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TelegramChatId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("NotificationSettings", (string)null);
+                    b.ToTable("ClosedPositions");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.OperationClaim", b =>
@@ -323,56 +148,66 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Property<Guid>("BrokerAccountId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("BrokerAccountId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ExternalOrderId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<decimal?>("FilledPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
-                    b.Property<Guid>("InstrumentId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<decimal?>("FilledQuantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
-                    b.Property<Guid?>("PositionId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<decimal?>("LimitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
-                    b.Property<decimal?>("Price")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                    b.Property<string>("OrderClass")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal>("Quantity")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("Side")
+                    b.Property<int>("Quantity")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("SignalId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Side")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("StopLoss")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                    b.Property<decimal?>("StopLossLimitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
-                    b.Property<decimal?>("TakeProfit")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                    b.Property<decimal?>("StopLossStopPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
+                    b.Property<decimal?>("StopPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("TakeProfitLimitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("TimeInForce")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -380,22 +215,9 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BrokerAccountId");
-
-                    b.HasIndex("BrokerAccountId1");
-
-                    b.HasIndex("InstrumentId");
-
-                    b.HasIndex("PositionId");
-
-                    b.HasIndex("SignalId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Orders", (string)null);
                 });
@@ -406,11 +228,11 @@ namespace AutoTraderApp.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BrokerAccountId")
+                    b.Property<Guid?>("BrokerAccountId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("ClosedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<decimal>("CostBasis")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -419,47 +241,36 @@ namespace AutoTraderApp.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("CurrentPrice")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("EntryPrice")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("InstrumentId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("bit");
 
-                    b.Property<DateTime>("OpenedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<decimal>("MarketValue")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("Quantity")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("RealizedPnL")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("Side")
-                        .HasColumnType("int");
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("StopLoss")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<Guid?>("StrategyId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal?>("TakeProfit")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                    b.Property<decimal>("TodayChange")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("UnrealizedPnL")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnrealizedPnLPercentage")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -467,31 +278,21 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BrokerAccountId");
 
-                    b.HasIndex("InstrumentId");
-
-                    b.HasIndex("StrategyId");
-
-                    b.HasIndex("UserId");
-
                     b.ToTable("Positions", (string)null);
                 });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Price", b =>
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Trade", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("Close")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                    b.Property<Guid>("BrokerAccountId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -499,20 +300,16 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("High")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("InstrumentId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("Low")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<decimal>("Open")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
@@ -523,267 +320,11 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("Volume")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("InstrumentId", "Timestamp");
-
-                    b.ToTable("Prices", (string)null);
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Signal", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Confidence")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("InstrumentId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Price")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("StrategyId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InstrumentId");
-
-                    b.HasIndex("StrategyId");
-
-                    b.ToTable("Signals", (string)null);
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Strategy", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<decimal>("MaxPositionSize")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("RiskLevel")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("StopLossPercentage")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<decimal>("TakeProfitPercentage")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Strategies", (string)null);
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Trade", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Commission")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("ExecutedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("ExecutedPrice")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<decimal>("ExecutedQuantity")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<string>("ExternalTradeId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("PositionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("PositionId");
+                    b.HasIndex("BrokerAccountId");
 
                     b.ToTable("Trades", (string)null);
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Action")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Condition")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Indicator")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid>("StrategyId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Value")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StrategyId");
-
-                    b.ToTable("TradingRules", (string)null);
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("CurrentBalance")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("ProfitLoss")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<decimal>("StartBalance")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("StrategyId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("TotalTrades")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StrategyId");
-
-                    b.ToTable("TradingSessions", (string)null);
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.User", b =>
@@ -877,35 +418,6 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.ToTable("UserOperationClaims");
                 });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Alert", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.Instrument", "Instrument")
-                        .WithMany()
-                        .HasForeignKey("InstrumentId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Instrument");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.BacktestResult", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.Strategy", "Strategy")
-                        .WithMany()
-                        .HasForeignKey("StrategyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Strategy");
-                });
-
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerAccount", b =>
                 {
                     b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
@@ -917,171 +429,33 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.NotificationSetting", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Order", b =>
                 {
                     b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
-                        .WithMany()
+                        .WithMany("Orders")
                         .HasForeignKey("BrokerAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", null)
-                        .WithMany("Orders")
-                        .HasForeignKey("BrokerAccountId1");
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.Instrument", "Instrument")
-                        .WithMany()
-                        .HasForeignKey("InstrumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.Position", null)
-                        .WithMany("Orders")
-                        .HasForeignKey("PositionId");
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.Signal", "Signal")
-                        .WithMany()
-                        .HasForeignKey("SignalId");
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("BrokerAccount");
-
-                    b.Navigation("Instrument");
-
-                    b.Navigation("Signal");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Position", b =>
                 {
-                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
+                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", null)
                         .WithMany("Positions")
-                        .HasForeignKey("BrokerAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.Instrument", "Instrument")
-                        .WithMany()
-                        .HasForeignKey("InstrumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.Strategy", "Strategy")
-                        .WithMany()
-                        .HasForeignKey("StrategyId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("BrokerAccount");
-
-                    b.Navigation("Instrument");
-
-                    b.Navigation("Strategy");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Price", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.Instrument", "Instrument")
-                        .WithMany("Prices")
-                        .HasForeignKey("InstrumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Instrument");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Signal", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.Instrument", "Instrument")
-                        .WithMany()
-                        .HasForeignKey("InstrumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.Strategy", "Strategy")
-                        .WithMany()
-                        .HasForeignKey("StrategyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Instrument");
-
-                    b.Navigation("Strategy");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Strategy", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
+                        .HasForeignKey("BrokerAccountId");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Trade", b =>
                 {
-                    b.HasOne("AutoTraderApp.Domain.Entities.Order", "Order")
+                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
                         .WithMany("Trades")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.Position", "Position")
-                        .WithMany()
-                        .HasForeignKey("PositionId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Position");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingRule", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.Strategy", "Strategy")
-                        .WithMany("TradingRules")
-                        .HasForeignKey("StrategyId")
+                        .HasForeignKey("BrokerAccountId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Strategy");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingSession", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.Strategy", "Strategy")
-                        .WithMany()
-                        .HasForeignKey("StrategyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Strategy");
+                    b.Navigation("BrokerAccount");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.User", b =>
@@ -1133,31 +507,13 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Navigation("Orders");
 
                     b.Navigation("Positions");
-                });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Instrument", b =>
-                {
-                    b.Navigation("Prices");
+                    b.Navigation("Trades");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.OperationClaim", b =>
                 {
                     b.Navigation("UserOperationClaims");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Order", b =>
-                {
-                    b.Navigation("Trades");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Position", b =>
-                {
-                    b.Navigation("Orders");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Strategy", b =>
-                {
-                    b.Navigation("TradingRules");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.User", b =>

@@ -1,4 +1,4 @@
-﻿using AutoTraderApp.Application.Contracts.Repositories;
+﻿using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Common;
 using AutoTraderApp.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -133,6 +133,11 @@ namespace AutoTraderApp.Persistence.Repositories
         public async Task<T> GetSingleAsync(Expression<Func<T, bool>> predicate)
         {
             return await _context.Set<T>().FirstOrDefaultAsync(predicate);
+        }
+
+        public Task SaveChangesAsync()
+        {
+            return _context.SaveChangesAsync();
         }
     }
 }

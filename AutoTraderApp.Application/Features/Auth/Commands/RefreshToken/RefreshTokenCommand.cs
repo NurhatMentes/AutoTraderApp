@@ -1,6 +1,4 @@
-﻿using AutoMapper;
-using AutoTraderApp.Application.Contracts.Repositories;
-using AutoTraderApp.Application.Features.Auth.Models;
+﻿using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Application.Features.Common.AutoTraderApp.Application.Features.Common;
 using AutoTraderApp.Core.Constants;
 using AutoTraderApp.Core.Security.JWT;

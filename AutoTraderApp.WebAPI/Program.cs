@@ -11,7 +11,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
-using AutoTraderApp.Infrastructure.BackgroundServices;
 using AutoTraderApp.Infrastructure.DependencyResolvers.Autofac;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,7 +23,7 @@ builder.Host.ConfigureContainer<ContainerBuilder>(builder =>
     builder.RegisterModule(new AutofacInfrastructureModule());
 });
 
-
+builder.Services.AddHttpClient();
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -121,7 +120,6 @@ builder.Services.AddLogging(config =>
     config.AddDebug();
 });
 
-builder.Services.AddHostedService<PositionUpdateService>();
 
 
 var app = builder.Build();

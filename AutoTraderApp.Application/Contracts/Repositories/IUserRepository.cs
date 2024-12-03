@@ -1,6 +1,7 @@
-﻿using AutoTraderApp.Domain.Entities;
+﻿using AutoTraderApp.Core.Utilities.Repositories;
+using AutoTraderApp.Domain.Entities;
 
-namespace AutoTraderApp.Application.Contracts.Repositories;
+namespace AutoTraderApp.Core.Utilities.Repositories;
 
 public interface IUserRepository : IBaseRepository<User>
 {

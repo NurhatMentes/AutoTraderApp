@@ -1,13 +1,6 @@
-﻿using AutoTraderApp.Application.Features.Orders.Commands.CancelOrder;
-using AutoTraderApp.Application.Features.Orders.Commands.CreateOrder;
-using AutoTraderApp.Application.Features.Orders.Commands.FillOrder;
-using AutoTraderApp.Application.Features.Orders.Commands.RejectOrder;
-using AutoTraderApp.Application.Features.Orders.Queries.GetOrderDetails;
-using AutoTraderApp.Application.Features.Orders.Queries.GetUserOrders;
-using AutoTraderApp.Domain.Enums;
+﻿using AutoTraderApp.Application.Features.Orders.Commands.PlaceOrder;
+using AutoTraderApp.Application.Features.Orders.DTOs;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoTraderApp.WebAPI.Controllers
@@ -23,65 +16,41 @@ namespace AutoTraderApp.WebAPI.Controllers
             _mediator = mediator;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderCommand command)
+        [HttpPost("PlaceOrder")]
+        public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderDto orderDto)
         {
-            command.UserId = GetUserId();
-            return ActionResultInstance(await _mediator.Send(command));
+            var validator = new PlaceOrderValidator();
+            var validationResult = validator.Validate(orderDto);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Validasyon hataları.",
+                    errors = validationResult.Errors.Select(e => e.ErrorMessage)
+                });
+            }
+
+            var command = new PlaceOrderCommand { OrderDto = orderDto };
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = result.Message
+            });
         }
 
-        [HttpPost("{id}/cancel")]
-        public async Task<IActionResult> CancelOrder(Guid id)
-        {
-            var command = new CancelOrderCommand
-            {
-                OrderId = id,
-                UserId = GetUserId()
-            };
-            return ActionResultInstance(await _mediator.Send(command));
-        }
 
-        [HttpPost("{id}/fill")]
-        //[Authorize(Roles = "Admin")]  
-        public async Task<IActionResult> FillOrder(Guid id, [FromBody] decimal executedPrice)
-        {
-            var command = new FillOrderCommand
-            {
-                OrderId = id,
-                ExecutedPrice = executedPrice
-            };
-            return ActionResultInstance(await _mediator.Send(command));
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetUserOrders(
-            [FromQuery] OrderStatus? status,
-            [FromQuery] DateTime? startDate,
-            [FromQuery] DateTime? endDate,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
-        {
-            var query = new GetUserOrdersQuery
-            {
-                UserId = GetUserId(),
-                Status = status,
-                StartDate = startDate,
-                EndDate = endDate,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
-            return ActionResultInstance(await _mediator.Send(query));
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetOrderDetails(Guid id)
-        {
-            var query = new GetOrderDetailsQuery
-            {
-                OrderId = id,
-                UserId = GetUserId()
-            };
-            return ActionResultInstance(await _mediator.Send(query));
-        }
     }
 }

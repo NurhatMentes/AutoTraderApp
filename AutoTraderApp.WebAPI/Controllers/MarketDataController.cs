@@ -1,6 +1,8 @@
-﻿using AutoTraderApp.Application.Interfaces;
+﻿using AutoTraderApp.Application.Features.MarketData.Alpaca.Queries;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
+using AutoTraderApp.Infrastructure.Interfaces;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,14 +13,17 @@ namespace AutoTraderApp.WebAPI.Controllers
     public class MarketDataController : BaseController
     {
         private readonly IMarketDataService _marketDataService;
+        private readonly IMediator _mediator;
 
-        public MarketDataController(IMarketDataService marketDataService)
+
+        public MarketDataController(IMarketDataService marketDataService, IMediator mediator)
         {
             _marketDataService = marketDataService;
+            _mediator = mediator;
         }
 
-        [HttpGet("price/{symbol}")]
-        public async Task<IActionResult> GetCurrentPrice(string symbol)
+        [HttpGet("alphaVantage/price/{symbol}")]
+        public async Task<IActionResult> AlphaVantageGetCurrentPrice(string symbol)
         {
             var price = await _marketDataService.GetCurrentPrice(symbol);
             if (!price.HasValue)
@@ -27,8 +32,8 @@ namespace AutoTraderApp.WebAPI.Controllers
             return Ok(new SuccessDataResult<decimal>(price.Value, $"Şu anki fiyat {symbol}"));
         }
 
-        [HttpGet("historical/{symbol}")]
-        public async Task<IActionResult> GetHistoricalPrices(
+        [HttpGet("alphaVantage/historical/{symbol}")]
+        public async Task<IActionResult> AlphaVantageGetHistoricalPrices(
             string symbol,
             [FromQuery] DateTime startDate,
             [FromQuery] DateTime endDate)
@@ -37,8 +42,8 @@ namespace AutoTraderApp.WebAPI.Controllers
             return Ok(new SuccessDataResult<IEnumerable<Price>>(prices, $"Geçmiş fiyatlar {symbol}"));
         }
 
-        [HttpGet("intraday/{symbol}")]
-        public async Task<IActionResult> GetIntradayPrices(
+        [HttpGet("alphaVantage/intraday/{symbol}")]
+        public async Task<IActionResult> AlphaVantageGetIntradayPrices(
             string symbol,
             [FromQuery] string interval = "5min")
         {
@@ -47,7 +52,18 @@ namespace AutoTraderApp.WebAPI.Controllers
             if (intradayPrices == null || !intradayPrices.Any())
                 return NotFound($"Sembol için gün içi verisi bulunamadı: {symbol}");
 
-            return Ok(new SuccessDataResult<IEnumerable<Price>>(intradayPrices, $"Gün i çi fiyatlar {symbol} ({interval})"));
+            return Ok(new SuccessDataResult<IEnumerable<Price>>(intradayPrices, $"Gün içi fiyatlar {symbol} ({interval})"));
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetMarketData([FromQuery] string? symbol = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 100)
+        {
+            var result = await _mediator.Send(new GetMarketDataQuery { Symbol = symbol, Page = page, PageSize = pageSize });
+            if (!result.Success)
+            {
+                return BadRequest(result.Message);
+            }
+
+            return Ok(result);
         }
     }
 }

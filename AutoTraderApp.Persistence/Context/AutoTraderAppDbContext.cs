@@ -19,6 +19,8 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<ClosedPosition> ClosedPositions { get; set; }
         public DbSet<Trade> Trades { get; set; }
         public DbSet<BrokerAccount> BrokerAccounts { get; set; }
+        public DbSet<Signal> Signals { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

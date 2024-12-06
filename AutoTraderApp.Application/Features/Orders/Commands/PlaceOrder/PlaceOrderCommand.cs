@@ -70,7 +70,8 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, IResu
         }
         catch (Exception ex)
         {
-            return new ErrorResult($"İşlem sırasında bir hata oluştu: {ex.Message}");
+            Console.WriteLine("İşlem sırasında bir hata oluştu: {ex.Message}");
+            return new ErrorResult("İşlem sırasında bir hata oluştu");
         }
     }
 }

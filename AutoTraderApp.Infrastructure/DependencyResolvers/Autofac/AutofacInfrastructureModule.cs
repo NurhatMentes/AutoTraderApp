@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using AutoTraderApp.c.Services.TradingView;
 using AutoTraderApp.Core.CrossCuttingConcerns.Caching;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
@@ -78,6 +79,10 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
                 var settings = ctx.Resolve<IOptions<AlpacaSettings>>();
                 return new AlpacaService(httpClient, settings);
             }).As<IAlpacaService>().InstancePerLifetimeScope();
+
+
+            //TredingView
+            builder.RegisterType<TradingViewService>().As<ITradingViewService>().InstancePerLifetimeScope();
         }
     }
 }

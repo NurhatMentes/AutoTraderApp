@@ -1,33 +1,45 @@
-﻿using AutoTraderApp.Core.Utilities.Results;
+﻿using AutoTraderApp.Core.Utilities.Repositories;
+using AutoTraderApp.Core.Utilities.Results;
 using MediatR;
 
 namespace AutoTraderApp.Application.Features.Strategies.Commands
 {
-    public class GenerateStrategyCommand : IRequest<IDataResult<string>>
+    public class GenerateStrategyCommand : IRequest<IResult>
     {
-        public string ShortPeriod { get; set; }
-        public string LongPeriod { get; set; }
-        public string StrategyName { get; set; }
+        public string StrategyName { get; set; } = null!;
+        public string Symbol { get; set; } = null!;
+        public decimal EntryPrice { get; set; }
+        public decimal StopLoss { get; set; }
+        public decimal TakeProfit { get; set; }
+        public string TimeFrame { get; set; } = null!;
     }
 
-    public class GenerateStrategyCommandHandler : IRequestHandler<GenerateStrategyCommand, IDataResult<string>>
+    public class GenerateStrategyCommandHandler : IRequestHandler<GenerateStrategyCommand, IResult>
     {
-        public async Task<IDataResult<string>> Handle(GenerateStrategyCommand request, CancellationToken cancellationToken)
+        private readonly IBaseRepository<Domain.Entities.Strategy> _strategyRepository;
+
+        public GenerateStrategyCommandHandler(IBaseRepository<Domain.Entities.Strategy> strategyRepository)
         {
-            var pineScript = $@"
-            //@version=5
-            strategy('{request.StrategyName}', overlay=true)
-            shortMA = ta.sma(close, {request.ShortPeriod})
-            longMA = ta.sma(close, {request.LongPeriod})
+            _strategyRepository = strategyRepository;
+        }
 
-            if (ta.crossover(shortMA, longMA))
-                strategy.entry('Buy', strategy.long)
+        public async Task<IResult> Handle(GenerateStrategyCommand request, CancellationToken cancellationToken)
+        {
+            var strategy = new Domain.Entities.Strategy
+            {
+                StrategyName = request.StrategyName,
+                Symbol = request.Symbol,
+                EntryPrice = request.EntryPrice,
+                StopLoss = request.StopLoss,
+                TakeProfit = request.TakeProfit,
+                TimeFrame = request.TimeFrame,
+                CreatedAt = DateTime.UtcNow
+            };
 
-            if (ta.crossunder(shortMA, longMA))
-                strategy.close('Buy')
-        ";
+            await _strategyRepository.AddAsync(strategy);
+            await _strategyRepository.SaveChangesAsync();
 
-            return new SuccessDataResult<string>("Strateji başarıyla oluşturuldu.", data: pineScript);
+            return new SuccessResult("Strateji başarıyla oluşturuldu.");
         }
     }
 }

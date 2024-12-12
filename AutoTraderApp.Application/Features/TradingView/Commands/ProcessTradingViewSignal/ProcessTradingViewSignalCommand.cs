@@ -1,6 +1,8 @@
-﻿using AutoTraderApp.Application.Features.TradingView.DTOs;
+﻿using AutoMapper;
+using AutoTraderApp.Application.Features.TradingView.DTOs;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
+using AutoTraderApp.Domain.ExternalModels.TradingView;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
 
@@ -39,11 +41,10 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                     orderResult.Status == "pending_new" ||
                     orderResult.Status == "partially_filled" ||
                     orderResult.Status == "filled")
-                {
                     return new SuccessResult("Alış işlemi başarıyla gerçekleştirildi.");
-                }
             }
-            else if (request.Signal.Action == "SELL" || request.Signal.Action == "sell" || request.Signal.Action == "Sell")
+            else if (request.Signal.Action == "SELL" || request.Signal.Action == "sell" ||
+                     request.Signal.Action == "Sell")
             {
                 var orderResult = await _alpacaService.PlaceOrderAsync(new OrderRequest
                 {
@@ -59,12 +60,11 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                     orderResult.Status == "pending_new" ||
                     orderResult.Status == "partially_filled" ||
                     orderResult.Status == "filled")
-                {
                     return new SuccessResult("Satış işlemi başarıyla gerçekleştirildi.");
-                }
             }
 
             return new ErrorResult("İşlem başarısız oldu.");
+
         }
     }
 }

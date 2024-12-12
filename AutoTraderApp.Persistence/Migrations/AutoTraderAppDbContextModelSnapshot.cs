@@ -326,59 +326,6 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.ToTable("Signals");
                 });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.Strategy", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("EntryPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("StopLoss")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("StrategyName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<decimal>("TakeProfit")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("TimeFrame")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("WebhookUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Strategies", (string)null);
-                });
-
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Trade", b =>
                 {
                     b.Property<Guid>("Id")

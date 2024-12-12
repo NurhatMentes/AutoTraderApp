@@ -20,7 +20,6 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<Trade> Trades { get; set; }
         public DbSet<BrokerAccount> BrokerAccounts { get; set; }
         public DbSet<Signal> Signals { get; set; }
-        public DbSet<Strategy> Strategies { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -42,20 +41,6 @@ namespace AutoTraderApp.Persistence.Context
                 entity.Property(e => e.Quantity).HasColumnType("decimal(18,2)").IsRequired();
                 entity.Property(e => e.RealizedPnL).HasColumnType("decimal(18,2)").IsRequired();
                 entity.Property(e => e.ClosedAt).IsRequired();
-            });
-            modelBuilder.Entity<Strategy>(entity =>
-            {
-                entity.ToTable("Strategies");
-                entity.HasKey(s => s.Id);
-                entity.Property(s => s.StrategyName).IsRequired().HasMaxLength(100);
-                entity.Property(s => s.Symbol).IsRequired().HasMaxLength(10);
-                entity.Property(s => s.EntryPrice).IsRequired().HasColumnType("decimal(18,2)");
-                entity.Property(s => s.StopLoss).IsRequired().HasColumnType("decimal(18,2)");
-                entity.Property(s => s.TakeProfit).IsRequired().HasColumnType("decimal(18,2)");
-                entity.Property(s => s.TimeFrame).IsRequired().HasMaxLength(10);
-                entity.Property(s => s.CreatedAt).IsRequired();
-                entity.Property(s => s.WebhookUrl).IsRequired(false);
-
             });
         }
 

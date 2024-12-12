@@ -1,12 +1,10 @@
 ﻿using Autofac;
+using AutoTraderApp.c.Services.TradingView;
 using AutoTraderApp.Core.CrossCuttingConcerns.Caching;
-using AutoTraderApp.Core.Utilities.Settings;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using AutoTraderApp.Infrastructure.Services.Alpaca;
-using AutoTraderApp.Infrastructure.Services.Automation;
 using AutoTraderApp.Infrastructure.Services.MarketData.Models;
-using AutoTraderApp.Infrastructure.Services.TradingView;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -84,23 +82,7 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
 
 
             //TredingView
-            builder.Register(c => new HttpClient { BaseAddress = new Uri("https://www.tradingview.com/") })
-                .As<HttpClient>()
-                .SingleInstance();
-
-            builder.Register(context =>
-            {
-                var config = context.Resolve<IOptions<TradingViewSettings>>();
-                return new TradingViewService(context.Resolve<HttpClient>(), config);
-            }).As<ITradingViewService>().InstancePerLifetimeScope();
-
-
-            //builder.RegisterType<TradingViewService>().As<ITradingViewService>().InstancePerLifetimeScope();
-
-            // ITradingViewAutomationService bağımlılığı
-            builder.RegisterType<TradingViewAutomationService>()
-                   .As<ITradingViewAutomationService>()
-                   .InstancePerLifetimeScope();
+            builder.RegisterType<TradingViewService>().As<ITradingViewService>().InstancePerLifetimeScope();
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using AutoTraderApp.Application.Features.TradingView.DTOs;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
-using AutoTraderApp.Domain.ExternalModels.TradingView;
 
 namespace AutoTraderApp.Application.Features.TradingView.Profiles
 {
@@ -9,7 +8,6 @@ namespace AutoTraderApp.Application.Features.TradingView.Profiles
     {
         public TradingViewProfile()
         {
-            CreateMap<TradingViewStrategyDto, TradingViewStrategy>().ReverseMap();
             CreateMap<TradingViewSignalDto, OrderRequest>()
                 .ForMember(dest => dest.Symbol, opt => opt.MapFrom(src => src.Symbol))
                 .ForMember(dest => dest.Qty, opt => opt.MapFrom(src => src.Quantity))

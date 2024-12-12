@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Domain.Common;
 using AutoTraderApp.Domain.Entities;
+using AutoTraderApp.Persistence.EntityConfigurations;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
@@ -21,6 +22,7 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<BrokerAccount> BrokerAccounts { get; set; }
         public DbSet<Signal> Signals { get; set; }
         public DbSet<Strategy> Strategies { get; set; }
+        public DbSet<UserTradingAccount> UserTradingAccounts { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -57,6 +59,7 @@ namespace AutoTraderApp.Persistence.Context
                 entity.Property(s => s.WebhookUrl).IsRequired(false);
 
             });
+            modelBuilder.ApplyConfiguration(new UserTradingAccountConfiguration());
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

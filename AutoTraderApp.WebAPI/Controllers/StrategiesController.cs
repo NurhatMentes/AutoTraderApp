@@ -14,7 +14,7 @@ namespace AutoTraderApp.WebAPI.Controllers
         private readonly IBaseRepository<Strategy> _strategyRepository;
         private readonly IMediator _mediator;
 
-        public StrategiesController(IMediator mediator,IBaseRepository<Strategy> strategyRepository)
+        public StrategiesController(IMediator mediator, IBaseRepository<Strategy> strategyRepository)
         {
             _strategyRepository = strategyRepository;
             _mediator = mediator;
@@ -28,9 +28,9 @@ namespace AutoTraderApp.WebAPI.Controllers
         }
 
         [HttpPost("create")]
-        public async Task<IActionResult> CreateStrategy([FromBody] Guid strategyId)
+        public async Task<IActionResult> CreateStrategy(Guid strategyId, Guid userId)
         {
-            var result = await _mediator.Send(new CreateTradingViewStrategyByIdCommand { StrategyId = strategyId });
+            var result = await _mediator.Send(new CreateTradingViewStrategyByIdCommand { StrategyId = strategyId, UserId = userId });
             if (result.Success)
                 return Ok(result);
 

@@ -9,19 +9,24 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
     public class CreateTradingViewStrategyByIdCommand : IRequest<IResult>
     {
         public Guid StrategyId { get; set; }
+        public Guid UserId { get; set; }
     }
 
     public class CreateTradingViewStrategyByIdCommandHandler : IRequestHandler<CreateTradingViewStrategyByIdCommand, IResult>
     {
         private readonly IBaseRepository<Strategy> _strategyRepository;
         private readonly ITradingViewAutomationService _automationService;
+        private readonly IBaseRepository<UserTradingAccount> _userTradingAccount;
 
         public CreateTradingViewStrategyByIdCommandHandler(
             IBaseRepository<Strategy> strategyRepository,
-            ITradingViewAutomationService automationService)
+            ITradingViewAutomationService automationService,
+            IBaseRepository<UserTradingAccount> userTradingAccount
+            )
         {
             _strategyRepository = strategyRepository;
             _automationService = automationService;
+            _userTradingAccount = userTradingAccount;
         }
 
         public async Task<IResult> Handle(CreateTradingViewStrategyByIdCommand request, CancellationToken cancellationToken)
@@ -32,7 +37,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
                 return new ErrorResult("Strateji bulunamadı.");
 
             var script = GenerateStrategyScript(strategy);
-            var success = await _automationService.CreateStrategyAsync(strategy.StrategyName, strategy.Symbol, script, strategy.WebhookUrl);
+            var success = await _automationService.CreateStrategyAsync(strategy.StrategyName, strategy.Symbol, script, strategy.WebhookUrl, request.UserId);
 
             if (success)
                 return new SuccessResult("Strateji TradingView'de başarıyla oluşturuldu.");

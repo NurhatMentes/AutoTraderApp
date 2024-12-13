@@ -36,10 +36,10 @@ namespace AutoTraderApp.WebAPI.Controllers
             var result = await _tradingViewAutomationService.LoginAsync(loginDto.UserId, loginDto.Password);
             if (result)
             {
-                return Ok(result);
+                return Ok(new { Message = "TradingView'e giriş başarılı." });
             }
 
-            return BadRequest(result);
+            return BadRequest(new { Message = "TradingView'e giriş başarısız." });
         }
 
     }

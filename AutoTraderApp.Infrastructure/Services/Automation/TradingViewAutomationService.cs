@@ -34,7 +34,6 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 if (tradingAccount == null)
                 {
                     Console.WriteLine("No TradingView account found for the user.");
-                    new SuccessResult("Kullanıcı için TradingView hesabı bulunamadı.");
                     return false;
                 }
 
@@ -44,57 +43,63 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 if (!HashingHelper.VerifyPasswordHash(password, passwordHash, passwordSalt))
                 {
                     Console.WriteLine("Invalid TradingView password.");
-                    new SuccessResult("Geçersiz TradingView şifresi.");
                     return false;
                 }
-
 
                 var context = await _browser.NewContextAsync();
                 var page = await context.NewPageAsync();
 
                 await page.GotoAsync("https://www.tradingview.com");
-
                 await page.ClickAsync("button.tv-header__user-menu-button--anonymous");
-
                 await page.ClickAsync("button[data-name='header-user-menu-sign-in']");
-
                 await page.ClickAsync("button.emailButton-nKAw8Hvt");
-
                 await page.FillAsync("input[name='id_username']", tradingAccount.Email);
                 await page.FillAsync("input[name='id_password']", password);
-
                 await page.ClickAsync("button.submitButton-LQwxK8Bm");
+                await Task.Delay(TimeSpan.FromSeconds(30));
 
-                if (await page.IsVisibleAsync("div[data-testid='2fa-verification']"))
+                // Captcha kontrolü
+                if (await page.IsVisibleAsync("div#rc-anchor-container"))
                 {
-                    new ErrorResult("İki faktörlü kimlik doğrulama gerekli. Lütfen manuel olarak tamamlayın.");
+                    Console.WriteLine("Captcha detected. Please solve it manually.");
+                    await Task.Delay(TimeSpan.FromMinutes(3)); 
 
-                    new SuccessResult("Tarayıcı açıldı. Güvenlik kodunu manuel olarak girin.");
-                    await Task.Delay(TimeSpan.FromMinutes(5)); 
-
-                    if (await page.IsVisibleAsync("div[data-role='profile-menu']"))
+                    if (await page.IsVisibleAsync("div#rc-anchor-container"))
                     {
-                        Console.WriteLine("2FA completed successfully.");
-                        await page.CloseAsync(); 
-                        await context.CloseAsync(); 
-                        return true;
-                    }
-                    else
-                    {
-                        Console.WriteLine("2FA not completed within the given time.");
+                        Console.WriteLine("Captcha not solved within the time limit.");
                         return false;
                     }
                 }
 
-                await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-                Console.WriteLine("Login successful.");
-                new SuccessResult("Giriş başarılı.");
+                // 2FA kontrolü
+                if (await page.IsVisibleAsync("input[name='id_code']"))
+                {
+                    Console.WriteLine("2FA required. Waiting for user to complete it.");
+                    await Task.Delay(TimeSpan.FromMinutes(5));
 
-                _cacheManager.Add($"TradingViewSession_{userId}", true, 30); 
+                    if (await page.IsVisibleAsync("button.tv-header__user-menu-button--logged"))
+                    {
+                        Console.WriteLine("2FA completed successfully.");
+                        _cacheManager.Add($"TradingViewSession_{userId}", true, 30);
+                        return true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("2FA not completed within the time limit.");
+                        return false;
+                    }
+                }
 
-                await page.CloseAsync(); 
-                await context.CloseAsync(); 
-                return true;
+                // Giriş kontrolü
+                if (await page.IsVisibleAsync("button.tv-header__user-menu-button--logged"))
+                {
+                    Console.WriteLine("Login successful.");
+                    _cacheManager.Add($"TradingViewSession_{userId}", true, 30); 
+                    return true;
+                }
+
+                Console.WriteLine("Login failed.");
+                return false;
             }
             catch (Exception ex)
             {
@@ -102,6 +107,8 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 return false;
             }
         }
+
+
 
 
 

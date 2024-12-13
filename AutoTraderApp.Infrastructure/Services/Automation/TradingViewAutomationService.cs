@@ -1,7 +1,6 @@
 ﻿using AutoTraderApp.Core.CrossCuttingConcerns.Caching;
 using AutoTraderApp.Core.Security.Hashing;
 using AutoTraderApp.Core.Utilities.Repositories;
-using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
 using Microsoft.Playwright;
@@ -13,6 +12,9 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
         private readonly IBrowser _browser;
         private readonly IBaseRepository<UserTradingAccount> _tradingAccountRepository;
         private readonly ICacheManager _cacheManager;
+
+        private static IBrowserContext _context;
+        private static IPage _page;
 
         public TradingViewAutomationService(IBaseRepository<UserTradingAccount> tradingAccountRepository, ICacheManager cacheManager)
         {
@@ -46,38 +48,35 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     return false;
                 }
 
-                var context = await _browser.NewContextAsync();
-                var page = await context.NewPageAsync();
+                _context ??= await _browser.NewContextAsync();
+                _page ??= await _context.NewPageAsync();
 
-                await page.GotoAsync("https://www.tradingview.com");
-                await page.ClickAsync("button.tv-header__user-menu-button--anonymous");
-                await page.ClickAsync("button[data-name='header-user-menu-sign-in']");
-                await page.ClickAsync("button.emailButton-nKAw8Hvt");
-                await page.FillAsync("input[name='id_username']", tradingAccount.Email);
-                await page.FillAsync("input[name='id_password']", password);
-                await page.ClickAsync("button.submitButton-LQwxK8Bm");
+                await _page.GotoAsync("https://www.tradingview.com");
+                await _page.ClickAsync("button.tv-header__user-menu-button--anonymous");
+                await _page.ClickAsync("button[data-name='header-user-menu-sign-in']");
+                await _page.ClickAsync("button.emailButton-nKAw8Hvt");
+                await _page.FillAsync("input[name='id_username']", tradingAccount.Email);
+                await _page.FillAsync("input[name='id_password']", password);
+                await _page.ClickAsync("button.submitButton-LQwxK8Bm");
                 await Task.Delay(TimeSpan.FromSeconds(30));
 
-                // Captcha kontrolü
-                if (await page.IsVisibleAsync("div#rc-anchor-container"))
+                if (await _page.IsVisibleAsync("div#rc-anchor-container"))
                 {
                     Console.WriteLine("Captcha detected. Please solve it manually.");
-                    await Task.Delay(TimeSpan.FromMinutes(3)); 
-
-                    if (await page.IsVisibleAsync("div#rc-anchor-container"))
+                    await Task.Delay(TimeSpan.FromMinutes(3));
+                    if (await _page.IsVisibleAsync("div#rc-anchor-container"))
                     {
                         Console.WriteLine("Captcha not solved within the time limit.");
                         return false;
                     }
                 }
 
-                // 2FA kontrolü
-                if (await page.IsVisibleAsync("input[name='id_code']"))
+                if (await _page.IsVisibleAsync("input[name='id_code']"))
                 {
                     Console.WriteLine("2FA required. Waiting for user to complete it.");
-                    await Task.Delay(TimeSpan.FromMinutes(5));
+                    await Task.Delay(TimeSpan.FromMinutes(2));
 
-                    if (await page.IsVisibleAsync("button.tv-header__user-menu-button--logged"))
+                    if (await _page.IsVisibleAsync("button.tv-header__user-menu-button--logged"))
                     {
                         Console.WriteLine("2FA completed successfully.");
                         _cacheManager.Add($"TradingViewSession_{userId}", true, 30);
@@ -90,11 +89,10 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     }
                 }
 
-                // Giriş kontrolü
-                if (await page.IsVisibleAsync("button.tv-header__user-menu-button--logged"))
+                if (await _page.IsVisibleAsync("button.tv-header__user-menu-button--logged"))
                 {
                     Console.WriteLine("Login successful.");
-                    _cacheManager.Add($"TradingViewSession_{userId}", true, 30); 
+                    _cacheManager.Add($"TradingViewSession_{userId}", true, 30);
                     return true;
                 }
 
@@ -108,82 +106,116 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
             }
         }
 
-
-
-
-
-
         public async Task<bool> CreateStrategyAsync(string strategyName, string symbol, string script, string webhookUrl, Guid userId)
         {
             try
             {
-                var context = await _browser.NewContextAsync();
-                var page = await context.NewPageAsync();
-
-                var isLoggedIn = _cacheManager.Get<bool>($"TradingViewSession_{userId}");
-                if (!isLoggedIn)
+                if (!_cacheManager.Get<bool>($"TradingViewSession_{userId}"))
                 {
-                    new ErrorResult("Kullanıcı giriş yapmamış. Lütfen önce giriş yapın.");
-                }
-
-
-                await page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
-
-
-                // Open the Pine Editor tab
-                await page.WaitForSelectorAsync("button[aria-label='Open Pine Editor']", new PageWaitForSelectorOptions
-                {
-                    Timeout = 10000
-                });
-                await page.ClickAsync("button[aria-label='Open Pine Editor']");
-
-                // Access textarea in Pine Editor
-                var editor = await page.WaitForSelectorAsync("textarea.inputarea[data-mprt='7']", new PageWaitForSelectorOptions
-                {
-                    Timeout = 15000
-                });
-
-                if (editor == null)
-                {
-                    Console.WriteLine("Editor textarea not found.");
+                    Console.WriteLine("Kullanıcı oturumu açık değil. Strateji oluşturma iptal ediliyor.");
                     return false;
                 }
 
-                // Generate and paste the Pine Script code
-                await editor.FillAsync(string.Empty); 
-                await editor.FillAsync(script);
+                Console.WriteLine($"Sembol için grafik sayfasına yönlendirme: {symbol}");
+                await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
 
-                // Find and click the Save button
-                await page.WaitForSelectorAsync("div[data-tooltip='Save script']", new PageWaitForSelectorOptions
-                {
-                    Timeout = 10000
+                await Task.Delay(TimeSpan.FromSeconds(15));
+
+               
+                // Gelişmiş script temizleme ve yazma yaklaşımı
+                await _page.EvaluateAsync(@"() => {
+            const textArea = document.querySelector('textarea.inputarea');
+            if (textArea) {
+                // Textarea'nın tüm içeriğini silmek için 
+                textArea.focus();
+                
+                // Ctrl+A ile tüm içeriği seçme
+                const selectAllEvent = new KeyboardEvent('keydown', {
+                    bubbles: true,
+                    cancelable: true,
+                    keyCode: 65,
+                    which: 65,
+                    key: 'a',
+                    code: 'KeyA',
+                    ctrlKey: true
                 });
-                await page.ClickAsync("div[data-tooltip='Save script']");
+                textArea.dispatchEvent(selectAllEvent);
 
-                // Run strategy
-                await page.WaitForSelectorAsync("button:has-text('Add to Chart')", new PageWaitForSelectorOptions
-                {
-                    Timeout = 10000
+                // Delete tuşu ile içeriği silme
+                const deleteEvent = new KeyboardEvent('keydown', {
+                    bubbles: true,
+                    cancelable: true,
+                    keyCode: 46,
+                    which: 46,
+                    key: 'Delete',
+                    code: 'Delete'
                 });
-                await page.ClickAsync("button:has-text('Add to Chart')");
+                textArea.dispatchEvent(deleteEvent);
+            }
+        }");
 
-                // Create alarm and add webhook URL
-                await page.WaitForSelectorAsync("button[data-name='alerts']");
-                await page.ClickAsync("button[data-name='alerts']");
-                await page.ClickAsync("button:has-text('Create Alert')");
-                await page.WaitForSelectorAsync("input[placeholder='Webhook URL']");
-                await page.FillAsync("input[placeholder='Webhook URL']", webhookUrl);
-                await page.ClickAsync("button:has-text('Create')");
+                await Task.Delay(TimeSpan.FromSeconds(2));
 
+                // Yeni scripti yazma
+                await _page.EvaluateAsync(@"(script) => {
+            const textArea = document.querySelector('textarea.inputarea');
+            if (textArea) {
+                // Native input value setter kullanarak içeriği yazma
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                nativeInputValueSetter.call(textArea, script);
+                
+                // Input eventi tetikleme
+                const event = new Event('input', { bubbles: true });
+                textArea.dispatchEvent(event);
+            }
+        }", script);
+
+                await Task.Delay(TimeSpan.FromSeconds(3));
+
+                // Save Script butonuna tıklama
+                Console.WriteLine("Script kaydediliyor...");
+                var saveButton = await _page.QuerySelectorAsync("div[data-tooltip='Save script']");
+                if (saveButton != null)
+                {
+                    await saveButton.ClickAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+                }
+                else
+                {
+                    Console.WriteLine("Kaydetme butonu bulunamadı.");
+                    return false;
+                }
+
+                // "Add to Chart" düğmesine tıklama
+                Console.WriteLine("Strateji charts'a ekleniyor...");
+                var addToChartButton = await _page.QuerySelectorAsync("button:has-text('Add to Chart')");
+                if (addToChartButton != null)
+                {
+                    await addToChartButton.ClickAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+                }
+                else
+                {
+                    Console.WriteLine("Charts'a Ekle butonu bulunamadı.");
+                    return false;
+                }
+
+                Console.WriteLine("Strateji başarıyla oluşturuldu.");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error creating strategy: {ex.Message}");
+                Console.WriteLine($"Strateji oluşturma sırasında hata: {ex.Message}");
+                Console.WriteLine($"Detaylı Hata İzi: {ex.StackTrace}");
                 return false;
             }
         }
 
+        public void Dispose()
+        {
+            _page?.CloseAsync();
+            _context?.CloseAsync();
+            _browser?.CloseAsync();
+        }
     }
 }
-

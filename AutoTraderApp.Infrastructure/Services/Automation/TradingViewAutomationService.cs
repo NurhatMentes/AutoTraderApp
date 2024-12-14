@@ -121,7 +121,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
 
                 await Task.Delay(TimeSpan.FromSeconds(15));
 
-               
+
                 // Gelişmiş script temizleme ve yazma yaklaşımı
                 await _page.EvaluateAsync(@"() => {
             const textArea = document.querySelector('textarea.inputarea');
@@ -172,6 +172,8 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
 
                 await Task.Delay(TimeSpan.FromSeconds(3));
 
+
+
                 // Save Script butonuna tıklama
                 Console.WriteLine("Script kaydediliyor...");
                 var saveButton = await _page.QuerySelectorAsync("div[data-tooltip='Save script']");
@@ -186,17 +188,34 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     return false;
                 }
 
-                // "Add to Chart" düğmesine tıklama
-                Console.WriteLine("Strateji charts'a ekleniyor...");
-                var addToChartButton = await _page.QuerySelectorAsync("button:has-text('Add to Chart')");
-                if (addToChartButton != null)
+                // Save Script Save butonuna tıklama
+                var saveScriptButton = await _page.QuerySelectorAsync("button[name='save']");
+                if (saveScriptButton != null)
                 {
-                    await addToChartButton.ClickAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(2));
+                    Console.WriteLine("Save Script butonu bulundu, tıklanıyor...");
+                    await saveScriptButton.ClickAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(3));
                 }
                 else
                 {
-                    Console.WriteLine("Charts'a Ekle butonu bulunamadı.");
+                    Console.WriteLine("Save Script butonu bulunamadı.");
+                    return false;
+                }
+
+
+
+                // "Add to Chart" düğmesine tıklama
+                Console.WriteLine("Strateji charts'a ekleniyor...");
+                var addToChartButton = await _page.QuerySelectorAsync("div[data-name='add-script-to-chart']");
+                if (addToChartButton != null)
+                {
+                    Console.WriteLine("Add to Chart butonu bulundu, tıklanıyor...");
+                    await addToChartButton.ClickAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                }
+                else
+                {
+                    Console.WriteLine("Add to Chart butonu bulunamadı.");
                     return false;
                 }
 

@@ -3,6 +3,7 @@ using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
+using System.Globalization;
 
 namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingViewStrategyById
 {
@@ -52,18 +53,18 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
 strategy(""{strategy.StrategyName}"", overlay=true)
 
 // Koşullar
-longCondition = close > {strategy.EntryPrice}
+longCondition = close > {strategy.EntryPrice.ToString(CultureInfo.InvariantCulture)}
 if (longCondition)
     strategy.entry(""Buy"", strategy.long)
 
-shortCondition = close < {strategy.StopLoss}
+shortCondition = close < {strategy.StopLoss.ToString(CultureInfo.InvariantCulture)}
 if (shortCondition)
     strategy.entry(""Sell"", strategy.short)
 
 // Hedef kar ve zarar sınırları
-if (close > {strategy.TakeProfit})
+if (close > {strategy.TakeProfit.ToString(CultureInfo.InvariantCulture)})
     strategy.close(""Buy"")
-if (close < {strategy.StopLoss})
+if (close < {strategy.StopLoss.ToString(CultureInfo.InvariantCulture)})
     strategy.close(""Sell"")
 ";
         }

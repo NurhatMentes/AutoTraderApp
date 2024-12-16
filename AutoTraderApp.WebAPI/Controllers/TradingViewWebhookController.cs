@@ -29,34 +29,5 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(result);
         }
 
-        [HttpPost("send-strategy")]
-        public async Task<IActionResult> SendStrategy([FromBody] TradingViewStrategyDto strategy)
-        {
-            var command = new SendTradingViewStrategyCommand { Strategy = strategy };
-            var result = await _mediator.Send(command);
-
-            if (result.Success)
-                return Ok(result);
-
-            return BadRequest(result);
-        }
-
-        [HttpPost("signal")]
-        public IActionResult ReceiveSignal([FromBody] SignalRequest signalRequest)
-        {
-            // Verilerin doğruluğunu kontrol et
-            if (string.IsNullOrWhiteSpace(signalRequest.Action) ||
-                string.IsNullOrWhiteSpace(signalRequest.Symbol))
-            {
-                return BadRequest(new { Message = "Invalid signal data." });
-            }
-
-            // İşlemin başarılı olduğunu bildir
-            return Ok(new
-            {
-                Status = "Signal received",
-                Data = signalRequest
-            });
-        }
     }
 }

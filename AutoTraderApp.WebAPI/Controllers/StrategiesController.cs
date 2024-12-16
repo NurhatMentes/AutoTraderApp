@@ -28,9 +28,9 @@ namespace AutoTraderApp.WebAPI.Controllers
         }
 
         [HttpPost("create")]
-        public async Task<IActionResult> CreateStrategy(Guid strategyId, Guid userId)
+        public async Task<IActionResult> CreateStrategy(Guid strategyId, Guid brokerAccountId, Guid userId)
         {
-            var result = await _mediator.Send(new CreateTradingViewStrategyByIdCommand { StrategyId = strategyId, UserId = userId });
+            var result = await _mediator.Send(new CreateTradingViewStrategyByIdCommand { StrategyId = strategyId, BrokerAccountId = brokerAccountId, UserId = userId });
             if (result.Success)
                 return Ok(result);
 

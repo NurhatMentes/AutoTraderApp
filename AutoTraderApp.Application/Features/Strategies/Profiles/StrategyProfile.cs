@@ -12,7 +12,9 @@ namespace AutoTraderApp.Application.Features.Strategies.Profiles
         {
             CreateMap<GenerateStrategyCommand, StrategyDto>().ReverseMap();
             CreateMap<TradingViewStrategyDto, Strategy>().ReverseMap();
-            CreateMap<Strategy, StrategyDto>().ForMember(dest => dest.WebhookUrl, opt => opt.MapFrom(src => src.WebhookUrl)).ReverseMap();
+            CreateMap<Strategy, StrategyDto>()
+                .ForMember(dest => dest.WebhookUrl, opt => opt.MapFrom(src => src.WebhookUrl))
+                .ReverseMap();
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using AutoTraderApp.Application.Features.MarketData.Alpaca.Queries;
-using AutoTraderApp.Core.Utilities.Results;
+﻿using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
@@ -54,16 +53,6 @@ namespace AutoTraderApp.WebAPI.Controllers
 
             return Ok(new SuccessDataResult<IEnumerable<Price>>(intradayPrices, $"Gün içi fiyatlar {symbol} ({interval})"));
         }
-        [HttpGet]
-        public async Task<IActionResult> GetMarketData([FromQuery] string? symbol = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 100)
-        {
-            var result = await _mediator.Send(new GetMarketDataQuery { Symbol = symbol, Page = page, PageSize = pageSize });
-            if (!result.Success)
-            {
-                return BadRequest(result.Message);
-            }
-
-            return Ok(result);
-        }
+        
     }
 }

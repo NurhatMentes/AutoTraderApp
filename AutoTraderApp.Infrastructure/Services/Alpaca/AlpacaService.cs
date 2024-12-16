@@ -1,36 +1,60 @@
-﻿using AutoTraderApp.Core.Utilities.Results;
+﻿using AutoTraderApp.Core.Utilities.Repositories;
+using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
-using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+
 namespace AutoTraderApp.Infrastructure.Services.Alpaca
 {
     public class AlpacaService : IAlpacaService
     {
-        private readonly HttpClient _httpClient;
-        private readonly AlpacaSettings _alpacaSettings;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
 
-        public AlpacaService(HttpClient httpClient, IOptions<AlpacaSettings> alpacaSettings)
+        private readonly ConcurrentDictionary<Guid, HttpClient> _httpClientCache = new();
+
+        public AlpacaService(
+            IHttpClientFactory httpClientFactory,
+            IBaseRepository<BrokerAccount> brokerAccountRepository)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            if (_httpClient.BaseAddress == null)
-            {
-                _alpacaSettings = alpacaSettings.Value;
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.BaseAddress = new Uri(_alpacaSettings.IsPaper ? "https://paper-api.alpaca.markets/" : "https://api.alpaca.markets/");
-                _httpClient.DefaultRequestHeaders.Add("APCA-API-KEY-ID", _alpacaSettings.ApiKey);
-                _httpClient.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", _alpacaSettings.ApiSecret);
-            }
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+            _brokerAccountRepository = brokerAccountRepository ?? throw new ArgumentNullException(nameof(brokerAccountRepository));
         }
 
-        public async Task<AccountInfo> GetAccountInfoAsync(string apiKey, string apiSecret, bool isPaper)
+        private async Task<HttpClient> ConfigureHttpClientAsync(Guid brokerAccountId)
         {
-            var response = await _httpClient.GetAsync("v2/account");
+            if (_httpClientCache.TryGetValue(brokerAccountId, out var existingClient))
+            {
+                return existingClient;
+            }
+
+            var brokerAccount = await _brokerAccountRepository.GetAsync(b => b.Id == brokerAccountId);
+            if (brokerAccount == null)
+            {
+                throw new Exception("Broker hesabı bulunamadı.");
+            }
+
+            var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(brokerAccount.IsPaper ? "https://paper-api.alpaca.markets/" : "https://api.alpaca.markets/");
+            client.DefaultRequestHeaders.Clear();
+            client.DefaultRequestHeaders.Add("APCA-API-KEY-ID", brokerAccount.ApiKey);
+            client.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", brokerAccount.ApiSecret);
+
+            _httpClientCache.TryAdd(brokerAccountId, client);
+            return client;
+        }
+
+        public async Task<AccountInfo> GetAccountInfoAsync(Guid brokerAccountId)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            var response = await httpClient.GetAsync("v2/account");
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -59,24 +83,27 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             }
         }
 
-
-        public async Task<OrderResponse> PlaceOrderAsync(OrderRequest orderRequest)
+        public async Task<OrderResponse> PlaceOrderAsync(Guid brokerAccountId, OrderRequest orderRequest)
         {
-            var response = await _httpClient.PostAsJsonAsync("v2/orders", orderRequest);
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            var response = await httpClient.PostAsJsonAsync("v2/orders", orderRequest);
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 throw new Exception($"Alpaca API hatası: {response.StatusCode} - {errorContent}");
             }
 
-            var responseContent = await response.Content.ReadAsStringAsync(); 
+            var responseContent = await response.Content.ReadAsStringAsync();
             Console.WriteLine($"Alpaca Yanıtı: {responseContent}");
 
             try
             {
-                var orderResponse = JsonSerializer.Deserialize<OrderResponse>(responseContent); 
+                var orderResponse = JsonSerializer.Deserialize<OrderResponse>(responseContent);
                 if (orderResponse == null)
+                {
                     throw new Exception("Alpaca API yanıtı boş döndü.");
+                }
 
                 return orderResponse;
             }
@@ -84,13 +111,13 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             {
                 throw new Exception($"JSON deserialize sırasında bir hata oluştu: {ex.Message} - Yanıt: {responseContent}");
             }
-
         }
 
-        public async Task<List<Portfolio>> GetPortfolioAsync()
+        public async Task<List<Portfolio>> GetPortfolioAsync(Guid brokerAccountId)
         {
-            var response = await _httpClient.GetAsync("v2/positions");
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
 
+            var response = await httpClient.GetAsync("v2/positions");
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
@@ -110,14 +137,16 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 CostBasis = position.CostBasis,
                 UnrealizedPnL = position.UnrealizedPnL,
                 CurrentPrice = position.CurrentPrice,
-                CreatedAt = DateTime.UtcNow, 
-                UpdatedAt = DateTime.UtcNow     
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             }).ToList();
         }
 
-        public async Task<List<PositionResponse>> GetPositionsAsync()
+        public async Task<List<PositionResponse>> GetPositionsAsync(Guid brokerAccountId)
         {
-            var response = await _httpClient.GetAsync("/v2/positions");
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            var response = await httpClient.GetAsync("/v2/positions");
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
@@ -128,11 +157,11 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             return JsonSerializer.Deserialize<List<PositionResponse>>(responseContent);
         }
 
-        public async Task<IResult> ClosePositionAsync(string symbol, decimal quantity)
+        public async Task<IResult> ClosePositionAsync(string symbol, decimal quantity, Guid brokerAccountId)
         {
-            try
-            {
-                var response = await _httpClient.PostAsync($"/v2/positions/{symbol}/close",
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            var response = await httpClient.PostAsync($"/v2/positions/{symbol}/close",
                     new StringContent(JsonSerializer.Serialize(new { qty = quantity }), Encoding.UTF8, "application/json"));
 
                 if (!response.IsSuccessStatusCode)
@@ -142,73 +171,40 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 }
 
                 return new SuccessResult("Pozisyon Alpaca üzerinde kapatıldı.");
-            }
-            catch (Exception ex)
-            {
-                return new ErrorResult($"Alpaca API ile iletişim sırasında bir hata oluştu: {ex.Message}");
-            }
         }
 
 
 
-        public async Task<OrderResponse> CancelOrderAsync(string orderId)
+        public async Task<OrderResponse> CancelOrderAsync(string orderId, Guid brokerAccountId)
         {
-            var response = await _httpClient.DeleteAsync($"v2/orders/{orderId}");
+        var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+        var response = await httpClient.DeleteAsync($"v2/orders/{orderId}");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<OrderResponse>();
         }
 
-        public async Task<MarketDataResponse> GetMarketDataAsync(string symbol)
+
+        public async Task<OrderResponse[]> GetAllOrdersAsync(Guid brokerAccountId)
         {
-            var response = await _httpClient.GetAsync($"/v2/stocks/{symbol}/trades/latest?feed=sip");
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Alpaca API hatası: {errorContent}");
-            }
-
-            return await response.Content.ReadFromJsonAsync<MarketDataResponse>();
-        }
-
-        public async Task<List<MarketDataResponse>> GetAllMarketDataAsync(int page = 1, int pageSize = 30)
-        {
-            var assetsResponse = await _httpClient.GetAsync("/v2/assets");
-            if (!assetsResponse.IsSuccessStatusCode)
-            {
-                var errorContent = await assetsResponse.Content.ReadAsStringAsync();
-                throw new Exception($"Alpaca API hatası: {errorContent}");
-            }
-
-            var assets = await assetsResponse.Content.ReadFromJsonAsync<List<AssetResponse>>();
-
-            var marketDataResponses = new List<MarketDataResponse>();
-            foreach (var asset in assets)
-            {
-                var marketDataResponse = await GetMarketDataAsync(asset.Symbol);
-                marketDataResponses.Add(marketDataResponse);
-            }
-
-            return marketDataResponses;
-        }
-
-
-        public async Task<OrderResponse[]> GetAllOrdersAsync()
-        {
-            var response = await _httpClient.GetAsync("v2/orders");
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var response = await httpClient.GetAsync("v2/orders");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<OrderResponse[]>();
         }
 
-        public async Task<OrderResponse> GetOrderByIdAsync(string orderId)
+        public async Task<OrderResponse> GetOrderByIdAsync(string orderId, Guid brokerAccountId)
         {
-            var response = await _httpClient.GetAsync($"v2/orders/{orderId}");
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var response = await httpClient.GetAsync($"v2/orders/{orderId}");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<OrderResponse>();
         }
 
-        public async Task<Position[]> GetOpenPositionsAsync()
+        public async Task<Position[]> GetOpenPositionsAsync(Guid brokerAccountId)
         {
-            var response = await _httpClient.GetAsync("v2/positions");
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var response = await httpClient.GetAsync("v2/positions");
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
@@ -216,13 +212,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             }
 
             return await response.Content.ReadFromJsonAsync<Position[]>();
-        }
-
-        public async Task<LastPrice> GetLastPriceAsync(string symbol)
-        {
-            var response = await _httpClient.GetAsync($"v2/stocks/{symbol}/last");
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<LastPrice>();
         }
     }
 }

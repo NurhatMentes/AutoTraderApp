@@ -48,7 +48,7 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, IResu
 
         try
         {
-            var alpacaResponse = await _alpacaService.PlaceOrderAsync(orderRequest);
+            var alpacaResponse = await _alpacaService.PlaceOrderAsync(brokerAccount.UserId, orderRequest);
 
             if (alpacaResponse.Status == "new"
                 || alpacaResponse.Status == "partially_filled"

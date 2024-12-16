@@ -23,7 +23,7 @@ namespace AutoTraderApp.Application.Features.Portfolio.Queries
         {
             try
             {
-                var portfolio = await _alpacaService.GetPortfolioAsync();
+                var portfolio = await _alpacaService.GetPortfolioAsync(request.UserId);
                 var portfolioDto = _mapper.Map<List<PortfolioDto>>(portfolio);
                 return new SuccessDataResult<List<PortfolioDto>>(portfolioDto, "Portföy başarıyla alındı.");
             }

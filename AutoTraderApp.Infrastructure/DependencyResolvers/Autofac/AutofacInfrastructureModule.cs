@@ -1,6 +1,8 @@
 ﻿using Autofac;
 using AutoTraderApp.Core.CrossCuttingConcerns.Caching;
+using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Settings;
+using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using AutoTraderApp.Infrastructure.Services.Alpaca;
@@ -51,35 +53,21 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
                 .InstancePerLifetimeScope();
 
 
-            //Alpaca
+            // Alpaca
             builder.Register(ctx =>
             {
                 var configuration = ctx.Resolve<IConfiguration>();
                 var settings = new AlpacaSettings();
                 configuration.GetSection("AlpacaSettings").Bind(settings);
 
-                var client = new HttpClient
-                {
-                    BaseAddress = new Uri(settings.BaseUrl)
-                };
-                client.DefaultRequestHeaders.Add("APCA-API-KEY-ID", settings.ApiKey);
-                client.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", settings.ApiSecret);
-                return client;
-            }).Named<HttpClient>("alpaca").SingleInstance();
-
-            builder.Register(ctx =>
-            {
-                var configuration = ctx.Resolve<IConfiguration>();
-                var settings = new AlpacaSettings();
-                configuration.GetSection("AlpacaSettings").Bind(settings);
                 return Options.Create(settings);
             }).As<IOptions<AlpacaSettings>>().SingleInstance();
 
             builder.Register(ctx =>
             {
-                var httpClient = ctx.ResolveNamed<HttpClient>("alpaca");
-                var settings = ctx.Resolve<IOptions<AlpacaSettings>>();
-                return new AlpacaService(httpClient, settings);
+                var httpClientFactory = ctx.Resolve<IHttpClientFactory>();
+                var brokerAccountRepository = ctx.Resolve<IBaseRepository<BrokerAccount>>();
+                return new AlpacaService(httpClientFactory, brokerAccountRepository);
             }).As<IAlpacaService>().InstancePerLifetimeScope();
 
 

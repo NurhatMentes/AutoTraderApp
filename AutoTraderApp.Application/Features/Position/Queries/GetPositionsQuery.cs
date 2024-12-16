@@ -7,7 +7,10 @@ using MediatR;
 
 namespace AutoTraderApp.Application.Features.Position.Queries
 {
-    public class GetPositionsQuery : IRequest<IDataResult<List<PositionDto>>> { }
+    public class GetPositionsQuery : IRequest<IDataResult<List<PositionDto>>> 
+    {
+        public Guid BrokerAccountId { get; set; }
+    }
 
     public class GetPositionsQueryHandler : IRequestHandler<GetPositionsQuery, IDataResult<List<PositionDto>>>
     {
@@ -27,7 +30,7 @@ namespace AutoTraderApp.Application.Features.Position.Queries
 
         public async Task<IDataResult<List<PositionDto>>> Handle(GetPositionsQuery request, CancellationToken cancellationToken)
         {
-            var alpacaPositions = await _alpacaService.GetPositionsAsync();
+            var alpacaPositions = await _alpacaService.GetPositionsAsync(request.BrokerAccountId);
 
             if (alpacaPositions == null)
                 return new ErrorDataResult<List<PositionDto>>("Pozisyonlar alınamadı.");

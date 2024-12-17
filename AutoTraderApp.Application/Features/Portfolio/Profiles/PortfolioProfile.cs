@@ -7,7 +7,7 @@ namespace AutoTraderApp.Application.Features.Portfolio.Profiles
     {
         public PortfolioProfile()
         {
-            CreateMap<Domain.Entities.Portfolio, PortfolioDto>().ForMember(dest => dest.BrokerAccountId, opt => opt.MapFrom(src => src.BrokerAccountId)).ReverseMap();
+            CreateMap<Domain.Entities.Portfolio, PortfolioDto>().ReverseMap();
         }
     }
 }

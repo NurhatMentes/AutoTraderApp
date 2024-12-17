@@ -2,7 +2,6 @@
 {
     public class PositionDto
     {
-        public Guid BrokerAccountId { get; set; }
         public string Symbol { get; set; } // Örn: "AAPL"
         public decimal Quantity { get; set; } // Pozisyondaki miktar
         public decimal EntryPrice { get; set; } // Ortalama giriş fiyatı
@@ -13,7 +12,6 @@
         public decimal CurrentPrice { get; set; } // Şu anki fiyat
         public decimal RealizedPnL { get; set; } // Gerçekleşmiş kar/zarar
         public decimal TodayChange { get; set; } // Günlük değişim yüzdesi
-        public decimal? AvailableQuantity { get; set; }
-        public bool? IsOpen { get; set; } = true;
+        public bool IsOpen { get; set; } = true;
     }
 }

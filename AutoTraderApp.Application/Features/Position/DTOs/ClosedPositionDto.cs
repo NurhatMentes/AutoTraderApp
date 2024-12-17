@@ -2,7 +2,6 @@
 
 public class ClosedPositionDto
 {
-    public Guid BrokerAccountId { get; set; }
     public string Symbol { get; set; }
     public decimal Quantity { get; set; }
     public decimal RealizedPnL { get; set; }

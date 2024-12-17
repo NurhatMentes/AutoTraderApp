@@ -17,23 +17,23 @@ namespace AutoTraderApp.WebAPI.Controllers
             _mediator = mediator;
         }
 
-        [HttpGet("alpaca/get_positions/{brokerAccountId}")]
-        public async Task<IActionResult> GetPositions(Guid brokerAccountId)
+        [HttpGet]
+        public async Task<IActionResult> GetPositions()
         {
-            var result = await _mediator.Send(new GetPositionsQuery { BrokerAccountId = brokerAccountId });
+            var result = await _mediator.Send(new GetPositionsQuery());
             if (result.Success)
                 return Ok(result);
             return BadRequest(result);
         }
 
-        [HttpGet("alpaca/get_open_positions/{brokerAccountId}")]
-        public async Task<IActionResult> GetOpenPositions(Guid brokerAccountId)
+        [HttpGet("open")]
+        public async Task<IActionResult> GetOpenPositions()
         {
-            var result = await _mediator.Send(new GetPositionsQuery { BrokerAccountId = brokerAccountId });
+            var result = await _mediator.Send(new GetPositionsQuery());
             return Ok(result);
         }
 
-        [HttpPost("alpaca/get_close_positions/{brokerAccountId}")]
+        [HttpPost("close")]
         public async Task<IActionResult> ClosePosition([FromBody] ClosePositionCommand request)
         {
             var result = await _mediator.Send(request);

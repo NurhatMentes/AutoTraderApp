@@ -2,8 +2,6 @@
 
 public class PositionResponse
 {
-    public Guid BrokerAccountId { get; set; }
-
     [JsonPropertyName("symbol")]
     public string Symbol { get; set; }
 

@@ -8,7 +8,6 @@ namespace AutoTraderApp.Application.Features.Portfolio.DTOs
 {
     public class PortfolioDto
     {
-        public Guid BrokerAccountId { get; set; }
         public string Symbol { get; set; } // Örn: "AAPL"
         public decimal Quantity { get; set; } // Pozisyondaki miktar
         public decimal MarketValue { get; set; } // Şu anki piyasa değeri

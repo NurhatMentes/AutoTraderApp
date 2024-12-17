@@ -16,10 +16,10 @@ namespace AutoTraderApp.WebAPI.Controllers
             _mediator = mediator;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetPortfolio()
+        [HttpGet("alpaca/get_portfolio/{brokerAccountId}")]
+        public async Task<IActionResult> GetPortfolio(Guid brokerAccountId)
         {
-            var result = await _mediator.Send(new GetPortfolioQuery());
+            var result = await _mediator.Send(new GetPortfolioQuery { BrokerAccountId = brokerAccountId });
             if (result.Success)
                 return Ok(result);
             return BadRequest(result);

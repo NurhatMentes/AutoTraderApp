@@ -4,6 +4,7 @@ namespace AutoTraderApp.Domain.Entities;
 
 public class Position : BaseEntity
 {
+    public Guid BrokerAccountId { get; set; }
     public string Symbol { get; set; } // Örn: "AAPL"
     public decimal Quantity { get; set; } // Pozisyondaki miktar
     public decimal CurrentPrice { get; set; } // Şu anki fiyat

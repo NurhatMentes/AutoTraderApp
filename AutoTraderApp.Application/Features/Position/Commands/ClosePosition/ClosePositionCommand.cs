@@ -32,6 +32,7 @@ namespace AutoTraderApp.Application.Features.Position.Commands.ClosePosition
 
         public async Task<IResult> Handle(ClosePositionCommand request, CancellationToken cancellationToken)
         {
+            var positionCheck = await _alpacaService.GetPositionsAsync(request.BrokerAccountId);
             var position = await _positionRepository.GetAsync(p => p.Symbol == request.Symbol && p.IsOpen);
 
             if (position == null)

@@ -361,3 +361,4 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/AutoTraderApp.Application/Features/Portfolio/DTOs/PortfolioDto.cs

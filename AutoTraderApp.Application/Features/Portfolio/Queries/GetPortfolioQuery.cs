@@ -8,7 +8,7 @@ namespace AutoTraderApp.Application.Features.Portfolio.Queries
 {
     public class GetPortfolioQuery : IRequest<IDataResult<List<PortfolioDto>>> 
     {
-        public Guid brokerId { get; set; }
+        public Guid BrokerAccountId { get; set; }
     }
 
     public class GetPortfolioQueryHandler : IRequestHandler<GetPortfolioQuery, IDataResult<List<PortfolioDto>>>
@@ -26,7 +26,7 @@ namespace AutoTraderApp.Application.Features.Portfolio.Queries
         {
             try
             {
-                var portfolio = await _alpacaService.GetPortfolioAsync(request.brokerId);
+                var portfolio = await _alpacaService.GetPortfolioAsync(request.BrokerAccountId);
                 var portfolioDto = _mapper.Map<List<PortfolioDto>>(portfolio);
                 return new SuccessDataResult<List<PortfolioDto>>(portfolioDto, "Portföy başarıyla alındı.");
             }

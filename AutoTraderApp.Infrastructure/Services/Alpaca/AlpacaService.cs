@@ -131,6 +131,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
             return portfolio.Select(position => new Portfolio
             {
+                BrokerAccountId = brokerAccountId,
                 Symbol = position.Symbol,
                 Quantity = position.Qty,
                 MarketValue = position.MarketValue,
@@ -153,8 +154,25 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 throw new Exception($"Alpaca API hatası: {response.StatusCode} - {errorContent}");
             }
 
-            var responseContent = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<List<PositionResponse>>(responseContent);
+            var position = await response.Content.ReadFromJsonAsync<List<PositionResponse>>();
+            if (position == null)
+                return new List<PositionResponse>();
+
+            return position.Select(position => new PositionResponse
+            {
+                BrokerAccountId = brokerAccountId,
+                Symbol = position.Symbol,
+                Quantity = position.Quantity,
+                MarketValue = position.MarketValue,
+                CostBasis = position.CostBasis,
+                UnrealizedPnL = position.UnrealizedPnL,
+                CurrentPrice = position.CurrentPrice,
+                AvailableQuantity = position.AvailableQuantity,
+                EntryPrice = position.EntryPrice,
+                RealizedPnL = position.RealizedPnL,
+                TodayChange = position.TodayChange,
+                UnrealizedPnLPercentage = position.UnrealizedPnLPercentage
+            }).ToList();
         }
 
         public async Task<IResult> ClosePositionAsync(string symbol, decimal quantity, Guid brokerAccountId)

@@ -2,6 +2,8 @@
 {
     public class StrategyDto
     {
+        public Guid Id { get; set; }
+        public Guid UserId { get; set; }
         public string StrategyName { get; set; }
         public string Symbol { get; set; }
         public decimal EntryPrice { get; set; }

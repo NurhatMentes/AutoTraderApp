@@ -10,7 +10,7 @@ namespace AutoTraderApp.Application.Features.BrokerAccounts.Queries
 {
     public class GetAccountInfoQuery : IRequest<IDataResult<AccountInfoDto>>
     {
-        public Guid BrokerAccountId { get; set; }
+        public Guid brokerAccountId { get; set; }
     }
     public class GetAccountInfoQueryHandler : IRequestHandler<GetAccountInfoQuery, IDataResult<AccountInfoDto>>
     {
@@ -30,18 +30,15 @@ namespace AutoTraderApp.Application.Features.BrokerAccounts.Queries
 
         public async Task<IDataResult<AccountInfoDto>> Handle(GetAccountInfoQuery request, CancellationToken cancellationToken)
         {
-            var brokerAccount = await _brokerAccountRepository.GetByIdAsync(request.BrokerAccountId);
+            var brokerAccount = await _brokerAccountRepository.GetByIdAsync(request.brokerAccountId);
             if (brokerAccount == null)
                 return new ErrorDataResult<AccountInfoDto>("Broker hesabı bulunamadı.");
 
             try
             {
-                var accountInfo = await _alpacaService.GetAccountInfoAsync(
-                    brokerAccount.ApiKey,
-                    brokerAccount.ApiSecret,
-                    brokerAccount.IsPaper);
+                var accountInfo = await _alpacaService.GetAccountInfoAsync(brokerAccount.Id);
 
-                 var accountInfoDto = _mapper.Map<AccountInfoDto>(accountInfo);
+                var accountInfoDto = _mapper.Map<AccountInfoDto>(accountInfo);
                 return new SuccessDataResult<AccountInfoDto>(accountInfoDto, "Hesap bilgileri başarıyla alındı.");
             }
             catch (Exception ex)
@@ -49,5 +46,6 @@ namespace AutoTraderApp.Application.Features.BrokerAccounts.Queries
                 return new ErrorDataResult<AccountInfoDto>($"Hesap bilgileri alınırken bir hata oluştu: {ex.Message}");
             }
         }
+
     }
 }

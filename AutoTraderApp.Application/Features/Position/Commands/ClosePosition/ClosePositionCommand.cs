@@ -9,6 +9,7 @@ namespace AutoTraderApp.Application.Features.Position.Commands.ClosePosition
 {
     public class ClosePositionCommand : IRequest<IResult>
     {
+        public Guid BrokerAccountId { get; set; }
         public string Symbol { get; set; }
         public decimal Quantity { get; set; }
     }
@@ -39,7 +40,7 @@ namespace AutoTraderApp.Application.Features.Position.Commands.ClosePosition
             if (request.Quantity > position.Quantity)
                 return new ErrorResult("Kapatılacak miktar pozisyon miktarından büyük olamaz.");
 
-            var alpacaResult = await _alpacaService.ClosePositionAsync(request.Symbol, request.Quantity);
+            var alpacaResult = await _alpacaService.ClosePositionAsync(request.Symbol, request.Quantity,request.BrokerAccountId);
 
             if (!alpacaResult.Success)
                 return new ErrorResult($"Alpaca API hatası: {alpacaResult.Message}");

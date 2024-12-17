@@ -37,7 +37,7 @@ namespace AutoTraderApp.WebAPI.Controllers
         [HttpGet("GetAccountInfo/{brokerAccountId}")]
         public async Task<IActionResult> GetAccountInfo(Guid brokerAccountId)
         {
-            var result = await _mediator.Send(new GetAccountInfoQuery { BrokerAccountId = brokerAccountId });
+            var result = await _mediator.Send(new GetAccountInfoQuery { brokerAccountId = brokerAccountId });
             if (!result.Success)
                 return BadRequest(result);
 

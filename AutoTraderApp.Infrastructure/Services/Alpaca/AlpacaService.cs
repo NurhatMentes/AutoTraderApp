@@ -143,6 +143,61 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             }).ToList();
         }
 
+        public async Task<List<OrderResponse>> GetFilledOrdersAsync(Guid brokerAccountId, DateTime startDate, DateTime endDate)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            // Tarihleri ISO 8601 formatına dönüştür
+            var afterDate = startDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+            var untilDate = endDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+            // Alpaca endpoint
+            var url = $"/v2/orders?status=filled&after={afterDate}&until={untilDate}";
+            var response = await httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Alpaca API hatası: {response.StatusCode} - {errorContent}");
+            }
+
+            var orders = await response.Content.ReadFromJsonAsync<List<OrderResponse>>();
+            return orders ?? new List<OrderResponse>();
+        }
+
+
+        //  Günlük Kar-Zarar Hesapla
+        public async Task<Dictionary<string, string>> CalculateDailyPnL(List<OrderResponse> orders)
+        {
+            var pnlResults = new Dictionary<string, decimal>();
+
+            foreach (var order in orders)
+            {
+                if (!decimal.TryParse(order.FilledQuantity, out var quantity) || quantity <= 0)
+                    continue;
+
+                if (!decimal.TryParse(order.FilledAvgPrice, out var avgPrice) || avgPrice <= 0)
+                    continue;
+
+                var totalValue = quantity * avgPrice;
+                var sign = order.Side == "sell" ? 1 : -1; // Satış: Pozitif, Alış: Negatif
+
+                if (!pnlResults.ContainsKey(order.Symbol))
+                    pnlResults[order.Symbol] = 0;
+
+                pnlResults[order.Symbol] += totalValue * sign;
+            }
+
+            // Değerleri formatlı string olarak dönüştür
+            var formattedResults = pnlResults.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToString("N2") // Virgüllü format ve iki ondalık basamak
+            );
+
+            return formattedResults;
+        }
+
+
         public async Task<List<PositionResponse>> GetPositionsAsync(Guid brokerAccountId)
         {
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);

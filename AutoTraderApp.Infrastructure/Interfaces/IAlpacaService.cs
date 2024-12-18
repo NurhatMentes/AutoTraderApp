@@ -12,5 +12,7 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         Task<List<PositionResponse>> GetPositionsAsync(Guid brokerAccountId);
         Task<List<Portfolio>> GetPortfolioAsync(Guid brokerAccountId);
         Task<IResult> ClosePositionAsync(string symbol, decimal quantity, Guid userId);
+        Task<List<OrderResponse>> GetFilledOrdersAsync(Guid brokerAccountId, DateTime startDate, DateTime endDate);
+        Task<Dictionary<string, string>> CalculateDailyPnL(List<OrderResponse> orders);
     }
 }

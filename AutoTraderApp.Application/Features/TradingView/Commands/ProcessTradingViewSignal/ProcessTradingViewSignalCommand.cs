@@ -1,6 +1,7 @@
 ﻿using AutoTraderApp.Application.Features.TradingView.DTOs;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
+using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
@@ -17,13 +18,16 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
     {
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
         private readonly IAlpacaService _alpacaService;
+        private readonly TradingViewSignalLogService _signalLogService;
 
         public ProcessTradingViewSignalCommandHandler(
             IBaseRepository<BrokerAccount> brokerAccountRepository,
-            IAlpacaService alpacaService)
+            IAlpacaService alpacaService,
+           TradingViewSignalLogService signalLogService)
         {
             _brokerAccountRepository = brokerAccountRepository;
             _alpacaService = alpacaService;
+            _signalLogService = signalLogService;
         }
 
         public async Task<IResult> Handle(ProcessTradingViewSignalCommand request, CancellationToken cancellationToken)
@@ -51,6 +55,17 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                     orderResult.Status == "partially_filled" ||
                     orderResult.Status == "filled")
                 {
+                    await _signalLogService.LogSignalAsync(
+           signal.UserId,
+           signal.BrokerAccountId,
+           signal.Action,
+           signal.Symbol,
+           signal.Quantity,
+           signal.Price,
+           "Alım Gerçekleşti",
+           $"{signal.Symbol} hissesinden {signal.Quantity} adet sattın alındı ve işlendi."
+       );
+
                     return new SuccessResult("Alış işlemi başarıyla gerçekleştirildi.");
                 }
             }
@@ -71,6 +86,17 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                     orderResult.Status == "partially_filled" ||
                     orderResult.Status == "filled")
                 {
+                    await _signalLogService.LogSignalAsync(
+          signal.UserId,
+          signal.BrokerAccountId,
+          signal.Action,
+          signal.Symbol,
+          signal.Quantity,
+          signal.Price,
+          "Satım Gerçekleşti",
+          $"{signal.Symbol} hissesinden {signal.Quantity} adet sattıldı ve işlendi."
+      );
+
                     return new SuccessResult("Satış işlemi başarıyla gerçekleştirildi.");
                 }
             }

@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using AutoTraderApp.Core.CrossCuttingConcerns.Caching;
 using AutoTraderApp.Core.Utilities.Repositories;
+using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Core.Utilities.Settings;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
@@ -85,9 +86,20 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
 
             //builder.RegisterType<TradingViewService>().As<ITradingViewService>().InstancePerLifetimeScope();
 
-            // ITradingViewAutomationService bağımlılığı
+            // ITradingViewAutomationService 
             builder.RegisterType<TradingViewAutomationService>()
                    .As<ITradingViewAutomationService>()
+                   .InstancePerLifetimeScope();
+
+
+            // TradingView Log Service
+            builder.RegisterType<TradingViewLogService>()
+                   .AsSelf()
+                   .InstancePerLifetimeScope();
+
+            // TradingViewSignal Log Service
+            builder.RegisterType<TradingViewSignalLogService>()
+                   .AsSelf()
                    .InstancePerLifetimeScope();
         }
     }

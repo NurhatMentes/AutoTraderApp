@@ -193,45 +193,44 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 {
                     await saveButton.ClickAsync();
                     await Task.Delay(TimeSpan.FromSeconds(2));
+
+                    // Save Script Save butonuna tıklama
+                    var saveScriptButton = await _page.QuerySelectorAsync("button[name='save']");
+                    if (saveScriptButton != null)
+                    {
+                        Console.WriteLine("Save Script butonu bulundu, tıklanıyor...");
+                        await saveScriptButton.ClickAsync();
+                        await Task.Delay(TimeSpan.FromSeconds(3));
+
+                        // "Add to Chart" düğmesine tıklama
+                        Console.WriteLine("Strateji charts'a ekleniyor...");
+                        var addToChartButton = await _page.QuerySelectorAsync("div[data-name='add-script-to-chart']");
+                        if (addToChartButton != null)
+                        {
+                            Console.WriteLine("Add to Chart butonu bulundu, tıklanıyor...");
+                            await addToChartButton.ClickAsync();
+                            await Task.Delay(TimeSpan.FromSeconds(3));
+                        }
+                        else
+                        {
+                            Console.WriteLine("Add to Chart butonu bulunamadı.");
+                            return false;
+                        }
+
+                        Console.WriteLine("Strateji başarıyla oluşturuldu.");
+                        return true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Save Script butonu bulunamadı.");
+                        return false;
+                    }
                 }
                 else
                 {
                     Console.WriteLine("Kaydetme butonu bulunamadı.");
-                    return false;
                 }
 
-                // Save Script Save butonuna tıklama
-                var saveScriptButton = await _page.QuerySelectorAsync("button[name='save']");
-                if (saveScriptButton != null)
-                {
-                    Console.WriteLine("Save Script butonu bulundu, tıklanıyor...");
-                    await saveScriptButton.ClickAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(3));
-                }
-                else
-                {
-                    Console.WriteLine("Save Script butonu bulunamadı.");
-                    return false;
-                }
-
-
-
-                // "Add to Chart" düğmesine tıklama
-                Console.WriteLine("Strateji charts'a ekleniyor...");
-                var addToChartButton = await _page.QuerySelectorAsync("div[data-name='add-script-to-chart']");
-                if (addToChartButton != null)
-                {
-                    Console.WriteLine("Add to Chart butonu bulundu, tıklanıyor...");
-                    await addToChartButton.ClickAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(3));
-                }
-                else
-                {
-                    Console.WriteLine("Add to Chart butonu bulunamadı.");
-                    return false;
-                }
-
-                Console.WriteLine("Strateji başarıyla oluşturuldu.");
                 return true;
             }
             catch (Exception ex)

@@ -22,7 +22,9 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<BrokerAccount> BrokerAccounts { get; set; }
         public DbSet<Signal> Signals { get; set; }
         public DbSet<Strategy> Strategies { get; set; }
-        public DbSet<UserTradingAccount> UserTradingAccounts { get; set; } = null!;
+        public DbSet<UserTradingAccount> UserTradingAccounts { get; set; }
+        public DbSet<TradingViewLog> tradingViewLogs { get; set; }
+        public DbSet<TradingViewSignalLog> tradingViewSignalLogs { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -60,6 +62,8 @@ namespace AutoTraderApp.Persistence.Context
 
             });
             modelBuilder.ApplyConfiguration(new UserTradingAccountConfiguration());
+            modelBuilder.ApplyConfiguration(new TradingViewLogConfiguration());
+            modelBuilder.ApplyConfiguration(new TradingViewSignalLogConfiguration());
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

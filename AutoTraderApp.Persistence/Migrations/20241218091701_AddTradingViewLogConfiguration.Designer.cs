@@ -4,6 +4,7 @@ using AutoTraderApp.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutoTraderApp.Persistence.Migrations
 {
     [DbContext(typeof(AutoTraderAppDbContext))]
-    partial class AutoTraderAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241218091701_AddTradingViewLogConfiguration")]
+    partial class AddTradingViewLogConfiguration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -482,64 +485,6 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.ToTable("TradingViewLogs", (string)null);
                 });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingViewSignalLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Message")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BrokerAccountId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("TradingViewSignalLogs", (string)null);
-                });
-
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -740,25 +685,6 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Navigation("BrokerAccount");
 
                     b.Navigation("Strategy");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingViewSignalLog", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
-                        .WithMany()
-                        .HasForeignKey("BrokerAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("BrokerAccount");
 
                     b.Navigation("User");
                 });

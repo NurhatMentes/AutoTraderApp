@@ -120,14 +120,28 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 Console.WriteLine($"Sembol için grafik sayfasına yönlendirme: {symbol}");
                 await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
 
-                await Task.Delay(TimeSpan.FromSeconds(15));
+                await Task.Delay(TimeSpan.FromSeconds(10));
+
+                // Strategy Tester'daki mevcut strateji kontrolü
+                var strategyTester = await _page.QuerySelectorAsync("[data-strategy-title]");
+                string loadedStrategyName = await strategyTester?.InnerTextAsync() ?? string.Empty;
+
+                if (loadedStrategyName.Equals(strategyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"Strateji zaten yüklenmiş: {loadedStrategyName}. Pine Editor adımları atlanıyor...");
+                    return true; 
+                }
+
+                Console.WriteLine("Strateji yüklü değil, Pine Editor'e geçiliyor...");
 
                 // Pine Editor açma
-                var pineEditorButton = await _page.QuerySelectorAsync("button[data-tooltip='Pine Editor']");
+                var pineEditorButton = await _page.QuerySelectorAsync("button[aria-label='Open Pine Editor'], button[data-name='scripteditor'], button[data-tooltip='Open Pine Editor']");
+
                 if (pineEditorButton != null)
                 {
+                    Console.WriteLine("Pine Editor butonu bulundu, tıklanıyor...");
                     await pineEditorButton.ClickAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    await Task.Delay(TimeSpan.FromSeconds(3));
                 }
                 else
                 {

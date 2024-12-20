@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Common;
+using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
@@ -138,6 +139,24 @@ namespace AutoTraderApp.Persistence.Repositories
         public Task SaveChangesAsync()
         {
             return _context.SaveChangesAsync();
+        }
+
+        public async Task ClearAsync()
+        {
+            var entities = _context.Set<T>();
+            _context.RemoveRange(entities);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task AddRangeAsync(IEnumerable<T> entities)
+        {
+            await _context.AddRangeAsync(entities);
+            await _context.SaveChangesAsync();
+        }
+
+        public Task AddRangeAsync(List<CombinedStock> combinedStocks)
+        {
+            throw new NotImplementedException();
         }
     }
 }

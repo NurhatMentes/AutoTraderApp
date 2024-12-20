@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using AutoTraderApp.Domain.Common;
+using AutoTraderApp.Domain.Entities;
 
 namespace AutoTraderApp.Core.Utilities.Repositories
 {
@@ -33,5 +34,7 @@ namespace AutoTraderApp.Core.Utilities.Repositories
         Task DeleteAsync(T entity);
         Task<T> GetSingleAsync(Expression<Func<T, bool>> predicate);
         Task SaveChangesAsync();
+        Task ClearAsync();
+        Task AddRangeAsync(IEnumerable<T> entities);
     }
 }

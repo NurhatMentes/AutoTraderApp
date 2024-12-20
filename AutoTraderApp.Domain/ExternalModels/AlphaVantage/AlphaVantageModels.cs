@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace AutoTraderApp.Infrastructure.Services.MarketData.Models
+namespace AutoTraderApp.Domain.ExternalModels.AlphaVantage
 {
     public class AlphaVantageResponse<T>
     {

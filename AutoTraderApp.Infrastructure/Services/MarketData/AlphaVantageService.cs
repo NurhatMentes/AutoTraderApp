@@ -1,13 +1,14 @@
 ﻿using System.Text.Json;
 using AutoTraderApp.Core.CrossCuttingConcerns.Caching;
 using AutoTraderApp.Domain.Entities;
+using AutoTraderApp.Domain.ExternalModels.AlphaVantage;
 using AutoTraderApp.Infrastructure.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace AutoTraderApp.Infrastructure.Services.MarketData.Models;
+namespace AutoTraderApp.Infrastructure.Services.MarketData;
 
-public class AlphaVantageService : IMarketDataService
+public class AlphaVantageService : IAlphaVantageService
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
@@ -158,4 +159,122 @@ public class AlphaVantageService : IMarketDataService
             return Enumerable.Empty<Price>();
         }
     }
+
+    public async Task<List<GainerDto>> GetTopGainersAsync()
+    {
+        try
+        {
+            var url = $"query?function=TOP_GAINERS_LOSERS&apikey={_apiKey}";
+            var response = await _httpClient.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            response.EnsureSuccessStatusCode();
+
+            // JSON verisini deserialize et
+            var jsonData = JsonSerializer.Deserialize<JsonElement>(content);
+
+            if (jsonData.TryGetProperty("top_gainers", out var gainersArray))
+            {
+                // top_gainers dizisini işleyin
+                var gainers = gainersArray.EnumerateArray()
+                    .Select(gainer => new GainerDto
+                    {
+                        Ticker = gainer.GetProperty("ticker").GetString(),
+                        Price = decimal.Parse(gainer.GetProperty("price").GetString()),
+                        ChangeAmount = decimal.Parse(gainer.GetProperty("change_amount").GetString()),
+                        ChangePercentage = gainer.GetProperty("change_percentage").GetString(),
+                        Volume = long.Parse(gainer.GetProperty("volume").GetString())
+                    })
+                    .ToList();
+
+                return gainers;
+            }
+
+            _logger.LogError("Günlük en çok yükselen hisseler verisi bulunamadı.");
+            throw new Exception("Günlük en çok yükselen hisseler verisi alınamadı.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Günlük en çok yükselen hisseler verisi alınamadı.");
+            throw new Exception("Günlük en çok yükselen hisseler verisi alınamadı.");
+        }
+    }
+
+    public async Task<List<LoserDto>> GetTopLosersAsync()
+    {
+        try
+        {
+            var url = $"query?function=TOP_GAINERS_LOSERS&apikey={_apiKey}";
+            var response = await _httpClient.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            response.EnsureSuccessStatusCode();
+
+            // JSON verisini deserialize et
+            var jsonData = JsonSerializer.Deserialize<JsonElement>(content);
+
+            if (jsonData.TryGetProperty("top_losers", out var losersArray))
+            {
+                // top_losers dizisini işleyin
+                var losers = losersArray.EnumerateArray()
+                    .Select(loser => new LoserDto
+                    {
+                        Ticker = loser.GetProperty("ticker").GetString(),
+                        Price = decimal.Parse(loser.GetProperty("price").GetString()),
+                        ChangeAmount = decimal.Parse(loser.GetProperty("change_amount").GetString()),
+                        ChangePercentage = loser.GetProperty("change_percentage").GetString(),
+                        Volume = long.Parse(loser.GetProperty("volume").GetString())
+                    })
+                    .ToList();
+
+                return losers;
+            }
+
+            _logger.LogError("Günlük en çok düşen hisseler verisi bulunamadı.");
+            throw new Exception("Günlük en çok düşen hisseler verisi alınamadı.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Günlük en çok düşen hisseler verisi alınamadı.");
+            throw new Exception("Günlük en çok düşen hisseler verisi alınamadı.");
+        }
+    }
+
+    public async Task<List<ActiveStockDto>> GetMostActiveAsync()
+    {
+        try
+        {
+            var url = $"query?function=TOP_GAINERS_LOSERS&apikey={_apiKey}";
+            var response = await _httpClient.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            response.EnsureSuccessStatusCode();
+
+            // JSON verisini deserialize et
+            var jsonData = JsonSerializer.Deserialize<JsonElement>(content);
+
+            if (jsonData.TryGetProperty("most_actively_traded", out var activeStocksArray))
+            {
+                // most_actively_traded dizisini işleyin
+                var activeStocks = activeStocksArray.EnumerateArray()
+                    .Select(activeStock => new ActiveStockDto
+                    {
+                        Ticker = activeStock.GetProperty("ticker").GetString(),
+                        Price = decimal.Parse(activeStock.GetProperty("price").GetString()),
+                        ChangeAmount = decimal.Parse(activeStock.GetProperty("change_amount").GetString()),
+                        ChangePercentage = activeStock.GetProperty("change_percentage").GetString(),
+                        Volume = long.Parse(activeStock.GetProperty("volume").GetString())
+                    })
+                    .ToList();
+
+                return activeStocks;
+            }
+
+            _logger.LogError("Hacim açısından en aktif hisseler verisi bulunamadı.");
+            throw new Exception("Hacim açısından en aktif hisseler verisi alınamadı.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Hacim açısından en aktif hisseler verisi alınamadı.");
+            throw new Exception("Hacim açısından en aktif hisseler verisi alınamadı.");
+        }
+    }
+
 }

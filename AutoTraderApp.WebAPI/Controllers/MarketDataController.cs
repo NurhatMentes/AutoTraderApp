@@ -11,11 +11,11 @@ namespace AutoTraderApp.WebAPI.Controllers
     [ApiController]
     public class MarketDataController : BaseController
     {
-        private readonly IMarketDataService _marketDataService;
+        private readonly IAlphaVantageService _marketDataService;
         private readonly IMediator _mediator;
 
 
-        public MarketDataController(IMarketDataService marketDataService, IMediator mediator)
+        public MarketDataController(IAlphaVantageService marketDataService, IMediator mediator)
         {
             _marketDataService = marketDataService;
             _mediator = mediator;
@@ -53,6 +53,26 @@ namespace AutoTraderApp.WebAPI.Controllers
 
             return Ok(new SuccessDataResult<IEnumerable<Price>>(intradayPrices, $"Gün içi fiyatlar {symbol} ({interval})"));
         }
-        
+
+        [HttpGet("alphaVantage/top_gainers")]
+        public async Task<IActionResult> GetTopGainers()
+        {
+            var gainers = await _marketDataService.GetTopGainersAsync();
+            return Ok(gainers);
+        }
+
+        [HttpGet("alphaVantage/top_losers")]
+        public async Task<IActionResult> GetTopLosers()
+        {
+            var losers = await _marketDataService.GetTopLosersAsync();
+            return Ok(losers);
+        }
+
+        [HttpGet("alphaVantage/most_activite")]
+        public async Task<IActionResult> GetMostActive()
+        {
+            var actives = await _marketDataService.GetMostActiveAsync();
+            return Ok(actives);
+        }
     }
 }

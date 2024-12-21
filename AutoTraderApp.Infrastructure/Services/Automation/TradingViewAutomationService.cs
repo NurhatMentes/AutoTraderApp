@@ -120,33 +120,39 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 Console.WriteLine($"Sembol için grafik sayfasına yönlendirme: {symbol}");
                 await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
 
-                await Task.Delay(TimeSpan.FromSeconds(10));
+                await Task.Delay(TimeSpan.FromSeconds(5));
 
                 // Strategy Tester'daki mevcut strateji kontrolü
                 var strategyTester = await _page.QuerySelectorAsync("[data-strategy-title]");
-                string loadedStrategyName = await strategyTester?.InnerTextAsync() ?? string.Empty;
-
-                if (loadedStrategyName.Equals(strategyName, StringComparison.OrdinalIgnoreCase))
+                if (strategyTester != null)
                 {
-                    Console.WriteLine($"Strateji zaten yüklenmiş: {loadedStrategyName}. Pine Editor adımları atlanıyor...");
-                    return true; 
+                    string loadedStrategyName = await strategyTester.InnerTextAsync() ?? string.Empty;
+                    if (loadedStrategyName.Equals(strategyName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.WriteLine($"Strateji zaten yüklenmiş: {loadedStrategyName}. Pine Editor adımları atlanıyor...");
+                    }
                 }
 
                 Console.WriteLine("Strateji yüklü değil, Pine Editor'e geçiliyor...");
 
-                // Pine Editor açma
-                var pineEditorButton = await _page.QuerySelectorAsync("button[aria-label='Open Pine Editor'], button[data-name='scripteditor'], button[data-tooltip='Open Pine Editor']");
+                var pineEditorCheck = await _page.QuerySelectorAsync("button[aria-label='Close Pine Editor']");
+                if (pineEditorCheck == null)
+                {
+                    // Pine Editor açma
+                    var pineEditorButton = await _page.QuerySelectorAsync("button[aria-label='Open Pine Editor'], button[data-name='scripteditor'], button[data-tooltip='Open Pine Editor']");
 
-                if (pineEditorButton != null)
-                {
-                    Console.WriteLine("Pine Editor butonu bulundu, tıklanıyor...");
-                    await pineEditorButton.ClickAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(3));
+                    if (pineEditorButton != null)
+                    {
+                        Console.WriteLine("Pine Editor butonu bulundu, tıklanıyor...");
+                        await pineEditorButton.ClickAsync();
+                        await Task.Delay(TimeSpan.FromSeconds(3));
+                    }
+                    else
+                    {
+                        Console.WriteLine("Pine Editor bulunamadı.");
+                    }
                 }
-                else
-                {
-                    Console.WriteLine("Pine Editor bulunamadı.");
-                }
+               
 
                 // Gelişmiş script temizleme ve yazma yaklaşımı
                 await _page.EvaluateAsync(@"() => {
@@ -199,7 +205,6 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 await Task.Delay(TimeSpan.FromSeconds(3));
 
 
-
                 // Save Script butonuna tıklama
                 Console.WriteLine("Script kaydediliyor...");
                 var saveButton = await _page.QuerySelectorAsync("div[data-tooltip='Save script']");
@@ -243,6 +248,22 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 else
                 {
                     Console.WriteLine("Kaydetme butonu bulunamadı.");
+
+                    // "Add to Chart" düğmesine tıklama
+                    Console.WriteLine("Strateji charts'a ekleniyor...");
+                    var addToChartButton = await _page.QuerySelectorAsync("div[data-name='add-script-to-chart']");
+                    if (addToChartButton != null)
+                    {
+                        Console.WriteLine("Add to Chart butonu bulundu, tıklanıyor...");
+                        await addToChartButton.ClickAsync();
+                        await Task.Delay(TimeSpan.FromSeconds(3));
+                    }
+                    else
+                    {
+                        Console.WriteLine("Add to Chart butonu bulunamadı.");
+                        return false;
+                    }
+
                 }
 
                 return true;
@@ -255,7 +276,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
             }
         }
 
-        public async Task<bool> CreateAlertAsync(string strategyName, string webhookUrl, string action, string symbol, int quantity, decimal price,Guid brokerAccountId,Guid userId)
+        public async Task<bool> CreateAlertAsync(string strategyName, string webhookUrl, string action, string symbol, int quantity, decimal price, Guid brokerAccountId, Guid userId)
         {
             try
             {
@@ -335,6 +356,55 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
         }
 
 
+        public async Task<bool> ApplyStrategiesToMultipleSymbolsAsync(string strategyName, string script, string webhookUrl, List<string> symbols, Guid userId)
+        {
+            if (!_cacheManager.Get<bool>($"TradingViewSession_{userId}"))
+            {
+                Console.WriteLine("Kullanıcı oturumu açık değil. Strateji oluşturma iptal ediliyor.");
+                return false;
+            }
+
+            foreach (var symbol in symbols)
+            {
+                try
+                {
+                    Console.WriteLine($"Strateji uygulanıyor: {symbol}");
+
+                    // Strateji oluşturma
+                    var strategyApplied = await CreateStrategyAsync(strategyName, symbol, script, webhookUrl, userId);
+                    if (!strategyApplied)
+                    {
+                        Console.WriteLine($"Strateji oluşturulamadı: {symbol}");
+                        continue;
+                    }
+
+                    // Alarm oluşturma
+                    var alertCreated = await CreateAlertAsync(
+                        strategyName,
+                        webhookUrl,
+                        "buy", // Örnek işlem
+                        symbol,
+                        quantity: 100, // Varsayılan miktar
+                        price: 0.0m, // Varsayılan fiyat
+                        brokerAccountId: Guid.NewGuid(), // Test ID
+                        userId: userId);
+
+                    if (!alertCreated)
+                    {
+                        Console.WriteLine($"Alarm oluşturulamadı: {symbol}");
+                        continue;
+                    }
+
+                    Console.WriteLine($"Strateji ve alarm başarıyla uygulandı: {symbol}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Hata oluştu: {ex.Message} - Sembol: {symbol}");
+                }
+            }
+
+            return true;
+        }
 
 
         public void Dispose()

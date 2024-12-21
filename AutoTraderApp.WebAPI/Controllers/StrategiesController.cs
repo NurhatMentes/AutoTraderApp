@@ -1,4 +1,6 @@
-﻿using AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingViewStrategyById;
+﻿using AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyToMultipleStocks;
+using AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingViewStrategyById;
+using AutoTraderApp.Application.Features.Strategies.DTOs;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
 using MediatR;
@@ -20,14 +22,14 @@ namespace AutoTraderApp.WebAPI.Controllers
             _mediator = mediator;
         }
 
-        [HttpGet("all")]
+        [HttpGet("get-all-strategy")]
         public async Task<IActionResult> GetAllStrategies()
         {
             var strategies = await _strategyRepository.GetAllAsync();
             return Ok(strategies);
         }
 
-        [HttpPost("create")]
+        [HttpPost("create-strategy")]
         public async Task<IActionResult> CreateStrategy(Guid strategyId, Guid brokerAccountId, Guid userId)
         {
             var result = await _mediator.Send(new CreateTradingViewStrategyByIdCommand { StrategyId = strategyId, BrokerAccountId = brokerAccountId, UserId = userId });
@@ -36,5 +38,22 @@ namespace AutoTraderApp.WebAPI.Controllers
 
             return BadRequest(result);
         }
+
+        [HttpPost("apply-strategy-to-multiple-stocks")]
+        public async Task<IActionResult> ApplyStrategyToMultipleStocks(Guid strategyId, Guid brokerAccountId, Guid userId)
+        {
+            var result = await _mediator.Send(new ApplyStrategyToMultipleStocksCommand
+            {
+                StrategyId = strategyId,
+                BrokerAccountId = brokerAccountId,
+                UserId = userId
+            });
+
+            if (result.Success)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
+
     }
 }

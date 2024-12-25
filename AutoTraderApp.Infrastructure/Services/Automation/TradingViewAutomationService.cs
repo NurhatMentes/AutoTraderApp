@@ -4,7 +4,9 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
 using Microsoft.Playwright;
+using System.Diagnostics;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace AutoTraderApp.Infrastructure.Services.Automation
 {
@@ -57,7 +59,9 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 await _page.ClickAsync("button[data-name='header-user-menu-sign-in']");
                 await _page.ClickAsync("button.emailButton-nKAw8Hvt");
                 await _page.FillAsync("input[name='id_username']", tradingAccount.Email);
+                await Task.Delay(TimeSpan.FromSeconds(1));
                 await _page.FillAsync("input[name='id_password']", password);
+                await Task.Delay(TimeSpan.FromSeconds(1));
                 await _page.ClickAsync("button.submitButton-LQwxK8Bm");
                 await Task.Delay(TimeSpan.FromSeconds(30));
 
@@ -80,7 +84,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     if (await _page.IsVisibleAsync("button.tv-header__user-menu-button--logged"))
                     {
                         Console.WriteLine("2FA completed successfully.");
-                        _cacheManager.Add($"TradingViewSession_{userId}", true, 30);
+                        _cacheManager.Add($"TradingViewSession_{userId}", true, 60);
                         return true;
                     }
                     else
@@ -109,6 +113,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
 
         public async Task<bool> CreateStrategyAsync(string strategyName, string symbol, string script, string webhookUrl, Guid userId)
         {
+            int randomTime = new Random().Next(4, 10);
             try
             {
                 if (!_cacheManager.Get<bool>($"TradingViewSession_{userId}"))
@@ -120,21 +125,9 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 Console.WriteLine($"Sembol için grafik sayfasına yönlendirme: {symbol}");
                 await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(6));
 
-                // Strategy Tester'daki mevcut strateji kontrolü
-                var strategyTester = await _page.QuerySelectorAsync("[data-strategy-title]");
-                if (strategyTester != null)
-                {
-                    string loadedStrategyName = await strategyTester.InnerTextAsync() ?? string.Empty;
-                    if (loadedStrategyName.Equals(strategyName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        Console.WriteLine($"Strateji zaten yüklenmiş: {loadedStrategyName}. Pine Editor adımları atlanıyor...");
-                    }
-                }
-
-                Console.WriteLine("Strateji yüklü değil, Pine Editor'e geçiliyor...");
-
+                // Pine Editor kontrolü ve açma
                 var pineEditorCheck = await _page.QuerySelectorAsync("button[aria-label='Close Pine Editor']");
                 if (pineEditorCheck == null)
                 {
@@ -145,16 +138,16 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     {
                         Console.WriteLine("Pine Editor butonu bulundu, tıklanıyor...");
                         await pineEditorButton.ClickAsync();
-                        await Task.Delay(TimeSpan.FromSeconds(3));
+                        await Task.Delay(TimeSpan.FromSeconds(randomTime));
                     }
                     else
                     {
                         Console.WriteLine("Pine Editor bulunamadı.");
+                        return false;
                     }
                 }
-               
 
-                // Gelişmiş script temizleme ve yazma yaklaşımı
+                // Script temizleme ve yazma işlemi
                 await _page.EvaluateAsync(@"() => {
             const textArea = document.querySelector('textarea.inputarea');
             if (textArea) {
@@ -188,6 +181,9 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
 
                 await Task.Delay(TimeSpan.FromSeconds(2));
 
+                // Virgülleri yalnızca sayısal değerlerde noktaya çevir
+                script = ConvertCommasInNumericValues(script);
+
                 // Yeni scripti yazma
                 await _page.EvaluateAsync(@"(script) => {
             const textArea = document.querySelector('textarea.inputarea');
@@ -203,7 +199,6 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
         }", script);
 
                 await Task.Delay(TimeSpan.FromSeconds(3));
-
 
                 // Save Script butonuna tıklama
                 Console.WriteLine("Script kaydediliyor...");
@@ -227,62 +222,75 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                         if (addToChartButton != null)
                         {
                             Console.WriteLine("Add to Chart butonu bulundu, tıklanıyor...");
+
+                            // "Confirmation" uyarısı varsa onayla
+                            var confirmationButton = await _page.QuerySelectorAsync("button[name='yes']");
+                            if (confirmationButton != null)
+                            {
+                                await confirmationButton.ClickAsync();
+                                await Task.Delay(TimeSpan.FromSeconds(2));
+                            }
+
                             await addToChartButton.ClickAsync();
                             await Task.Delay(TimeSpan.FromSeconds(3));
+
+                            Console.WriteLine("Strateji başarıyla oluşturuldu.");
+                            return true;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Add to Chart butonu bulunamadı. Başka Sembole geçiliyor");
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Save Script butonu bulunamadı. İşlem 'Add to Chart' ile devam edecek.");
+
+                        // "Add to Chart" düğmesine tıklama
+                        Console.WriteLine("Strateji charts'a ekleniyor...");
+                        var addToChartButton = await _page.QuerySelectorAsync("div[data-name='add-script-to-chart']");
+                        if (addToChartButton != null)
+                        {
+                            Console.WriteLine("Add to Chart butonu bulundu, tıklanıyor...");
+                            await addToChartButton.ClickAsync();
+                            await Task.Delay(TimeSpan.FromSeconds(randomTime));
                         }
                         else
                         {
                             Console.WriteLine("Add to Chart butonu bulunamadı.");
                             return false;
                         }
-
-                        Console.WriteLine("Strateji başarıyla oluşturuldu.");
-                        return true;
                     }
-                    else
-                    {
-                        Console.WriteLine("Save Script butonu bulunamadı.");
-                        return false;
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Kaydetme butonu bulunamadı.");
-
-                    // "Add to Chart" düğmesine tıklama
-                    Console.WriteLine("Strateji charts'a ekleniyor...");
-                    var addToChartButton = await _page.QuerySelectorAsync("div[data-name='add-script-to-chart']");
-                    if (addToChartButton != null)
-                    {
-                        Console.WriteLine("Add to Chart butonu bulundu, tıklanıyor...");
-                        await addToChartButton.ClickAsync();
-                        await Task.Delay(TimeSpan.FromSeconds(3));
-                    }
-                    else
-                    {
-                        Console.WriteLine("Add to Chart butonu bulunamadı.");
-                        return false;
-                    }
-
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
+                Console.WriteLine("----------------------------------------");
+                Console.WriteLine("----------------------------------------");
                 Console.WriteLine($"Strateji oluşturma sırasında hata: {ex.Message}");
-                Console.WriteLine($"Detaylı Hata İzi: {ex.StackTrace}");
+                Console.WriteLine("----------------------------------------");
+                Console.WriteLine("----------------------------------------");
                 return false;
             }
         }
 
+
         public async Task<bool> CreateAlertAsync(string strategyName, string webhookUrl, string action, string symbol, int quantity, decimal price, Guid brokerAccountId, Guid userId)
         {
+            Console.WriteLine($"Sembol için grafik sayfasına yönlendirme: {symbol}");
+            await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
+
+            await Task.Delay(TimeSpan.FromSeconds(6));
+            int randomTime = new Random().Next(4, 10);
+
             try
             {
                 Console.WriteLine("Alert butonu aranıyor...");
 
-                // Doğru "Add Alert" butonunu bul ve tıkla
+                // Add Alert butonuna tıkla
                 var allButtons = await _page.QuerySelectorAllAsync("button");
                 foreach (var button in allButtons)
                 {
@@ -295,12 +303,52 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     }
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(2));
+                    await Task.Delay(TimeSpan.FromSeconds(2));
 
-                // Alert Name
+                    //// **Condition Alanını Güncelleme**
+                    //Console.WriteLine("Condition alanı ayarlanıyor...");
+                    //var conditionDropdown = await _page.QuerySelectorAsync("span[data-name='main-series-select']");
+
+                    //if (conditionDropdown == null)
+                    //    throw new Exception("Condition listbox bulunamadı.");
+                    //await conditionDropdown.ClickAsync();
+                    //await Task.Delay(TimeSpan.FromSeconds(1));
+
+                    //// **Strateji adıyla eşleşme sağlama**
+                    //string sanitizedStrategyName = strategyName.Split('/').Last(); // Sadece `{strategy.StrategyName}` kısmını al
+                    //sanitizedStrategyName = sanitizedStrategyName.Replace("(", @"\(").Replace(")", @"\)"); // Özel karakterleri escape et
+                    //Console.WriteLine($"Eşleşme için aranan strateji adı: {sanitizedStrategyName}");
+
+                    //// Tüm seçenekleri listele ve eşleşmeyi kontrol et
+                    //var strategyOptions = await _page.QuerySelectorAllAsync("div[data-name]");
+                    //foreach (var option in strategyOptions)
+                    //{
+                    //    var optionName = await option.EvaluateAsync<string>("node => node.getAttribute('data-name')");
+                    //    if (optionName != null && optionName.Contains(sanitizedStrategyName))
+                    //    {
+                    //        Console.WriteLine($"Strateji bulundu: {optionName}, seçim yapılıyor...");
+                    //        await option.ClickAsync();
+                    //        await Task.Delay(TimeSpan.FromSeconds(1));
+                    //        break;
+                    //    }
+                    //}
+
+                    //// Eğer hiçbir seçenek bulunamadıysa hata döndür
+                    //if (strategyOptions == null || strategyOptions.Count == 0)
+                    //    throw new Exception($"Strateji '{sanitizedStrategyName}' listede bulunamadı.");
+
+
+                    //// **Trigger Alanını Güncelleme**
+                    //Console.WriteLine("Trigger alanı ayarlanıyor...");
+                    //var everyTimeButton = await _page.QuerySelectorAsync("button[data-name='every-time']");
+                    //if (everyTimeButton == null)
+                    //    throw new Exception("Every Time düğmesi bulunamadı.");
+                    //await everyTimeButton.ClickAsync();
+
+                // Alert adı ve diğer alanları doldurma
                 var alertNameInput = await _page.QuerySelectorAsync("#alert-name");
                 if (alertNameInput == null)
-                    throw new Exception("Alert ismi alanı bulunamadı.");
+                    throw new Exception("Alert adı input'u bulunamadı.");
                 await alertNameInput.FillAsync(strategyName);
 
                 // Expiration Ayarla (1 Ay Sonraya)
@@ -313,7 +361,9 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     await _page.EvaluateAsync($"() => document.querySelector('button[aria-controls=\"alert-editor-expiration-popup\"] .content-H6_2ZGVv').innerText = '{expirationDate}'");
                 }
 
-                // Message
+                await Task.Delay(TimeSpan.FromSeconds(3));
+
+                // Mesaj alanını doldur
                 var messageBox = await _page.QuerySelectorAsync("#alert-message");
                 if (messageBox == null)
                     throw new Exception("Message kutusu bulunamadı.");
@@ -345,7 +395,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     throw new Exception("Create butonu bulunamadı.");
                 await createButton.ClickAsync();
 
-                Console.WriteLine("Alert başarıyla oluşturuldu.");
+                Console.WriteLine($"Alert başarıyla oluşturuldu: {symbol} - {action}");
                 return true;
             }
             catch (Exception ex)
@@ -354,6 +404,8 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 return false;
             }
         }
+
+
 
 
         public async Task<bool> ApplyStrategiesToMultipleSymbolsAsync(string strategyName, string script, string webhookUrl, List<string> symbols, Guid userId)
@@ -404,6 +456,18 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
             }
 
             return true;
+        }
+
+        public static string ConvertCommasInNumericValues(string script)
+        {
+            // Regex pattern to match floating point numbers with commas
+            var pattern = @"(\d+,\d+)";
+
+            return Regex.Replace(script, pattern, match =>
+            {
+                // Replace comma with period only in numeric matches
+                return match.Value.Replace(",", ".");
+            });
         }
 
 

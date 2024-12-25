@@ -1,4 +1,5 @@
 ﻿using AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyToMultipleStocks;
+using AutoTraderApp.Application.Features.Strategies.Commands.CreateStrategy;
 using AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingViewStrategyById;
 using AutoTraderApp.Application.Features.Strategies.DTOs;
 using AutoTraderApp.Core.Utilities.Repositories;
@@ -29,7 +30,18 @@ namespace AutoTraderApp.WebAPI.Controllers
             return Ok(strategies);
         }
 
-        [HttpPost("create-strategy")]
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateStrategy([FromBody] CreateStrategyRequest request)
+        {
+            var result = await _mediator.Send(new CreateStrategyCommand(request));
+
+            if (result.Success)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
+
+        [HttpPost("send-tradingView-strategy")]
         public async Task<IActionResult> CreateStrategy(Guid strategyId, Guid brokerAccountId, Guid userId)
         {
             var result = await _mediator.Send(new CreateTradingViewStrategyByIdCommand { StrategyId = strategyId, BrokerAccountId = brokerAccountId, UserId = userId });

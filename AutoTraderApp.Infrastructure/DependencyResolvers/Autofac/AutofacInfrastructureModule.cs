@@ -57,15 +57,6 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             // Alpaca
             builder.Register(ctx =>
             {
-                var configuration = ctx.Resolve<IConfiguration>();
-                var settings = new AlpacaSettings();
-                configuration.GetSection("AlpacaSettings").Bind(settings);
-
-                return Options.Create(settings);
-            }).As<IOptions<AlpacaSettings>>().SingleInstance();
-
-            builder.Register(ctx =>
-            {
                 var httpClientFactory = ctx.Resolve<IHttpClientFactory>();
                 var brokerAccountRepository = ctx.Resolve<IBaseRepository<BrokerAccount>>();
                 return new AlpacaService(httpClientFactory, brokerAccountRepository);

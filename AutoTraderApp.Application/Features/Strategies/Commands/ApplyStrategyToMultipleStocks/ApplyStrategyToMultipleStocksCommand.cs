@@ -1,11 +1,14 @@
-﻿using AutoTraderApp.Core.Utilities.Calculators;
+﻿using AutoTraderApp.Application.Features.CombinedStocks.Commands;
+using AutoTraderApp.Application.Features.Strategies.Helpers;
+using AutoTraderApp.Core.Utilities.Calculators;
+using AutoTraderApp.Core.Utilities.Generator;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
+using AutoTraderApp.Infrastructure.Services.MarketData;
 using MediatR;
-using System.Globalization;
 
 namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyToMultipleStocks
 {
@@ -24,6 +27,8 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         private readonly IAlpacaService _alpacaService;
         private readonly TradingViewLogService _logService;
         private readonly IBaseRepository<CombinedStock> _combinedStockRepository;
+        private readonly AlphaVantageService _alphaVantageService;
+        private readonly IMediator _mediator;
 
         public ApplyStrategyToMultipleStocksCommandHandler(
             IBaseRepository<Strategy> strategyRepository,
@@ -31,7 +36,9 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             IBaseRepository<BrokerAccount> brokerAccountRepository,
             IAlpacaService alpacaService,
             TradingViewLogService logService,
-            IBaseRepository<CombinedStock> combinedStockRepository)
+            IBaseRepository<CombinedStock> combinedStockRepository,
+            AlphaVantageService alphaVantageService,
+            IMediator mediator)
         {
             _strategyRepository = strategyRepository;
             _automationService = automationService;
@@ -39,97 +46,128 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             _alpacaService = alpacaService;
             _logService = logService;
             _combinedStockRepository = combinedStockRepository;
+            _alphaVantageService = alphaVantageService;
+            _mediator = mediator;
         }
 
         public async Task<IResult> Handle(ApplyStrategyToMultipleStocksCommand request, CancellationToken cancellationToken)
         {
+            // UpdateCombinedStockListCommand çalıştırılıyor
+            var updateResult = await _mediator.Send(new UpdateCombinedStockListCommand());
+            if (!updateResult)
+            {
+                return new ErrorResult($"Birleşik hisse güncellenemedi");
+            }
+
             var combinedStocks = await _combinedStockRepository.GetAllAsync();
             if (combinedStocks == null || !combinedStocks.Any())
             {
                 return new ErrorResult("Birleşik hisse listesi bulunamadı.");
             }
 
+            // Strateji bilgisi
             var strategy = await _strategyRepository.GetAsync(s => s.Id == request.StrategyId);
             if (strategy == null)
                 return new ErrorResult("Strateji bulunamadı.");
 
+            // Broker hesabı doğrulaması
             var brokerAccount = await _brokerAccountRepository.GetAsync(b => b.Id == request.BrokerAccountId && b.UserId == request.UserId);
             if (brokerAccount == null)
                 return new ErrorResult("Geçerli bir broker hesabı bulunamadı.");
 
+            // Alpaca hesabı doğrulaması
             var account = await _alpacaService.GetAccountInfoAsync(brokerAccount.Id);
             if (account == null)
                 return new ErrorResult("Kullanıcı hesabı bilgileri alınamadı.");
 
             decimal portfolioValue = account.Cash;
-            decimal riskPercentage = 0.02m;
+            Console.WriteLine($"---------------Hesap değeri: {portfolioValue}");
 
-            var symbols = combinedStocks.Select(cs => cs.Symbol).ToList();
+            decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(portfolioValue);
+            var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, portfolioValue);
+            Console.WriteLine($"---------------Risk yüzdesi: {riskPercentage}");
 
-            foreach (var symbol in symbols)
+            foreach (var selectedStock in selectedStocks)
             {
+                Console.WriteLine($"---------------Seçilen hisseler: {selectedStock.Symbol} --- ");
+            }
+
+            foreach (var stock in selectedStocks)
+            {
+                int randomTime = new Random().Next(3, 11);
+                Console.WriteLine($"---------------Random Time (HANDLE): {randomTime}");
+
                 try
                 {
-                    int quantity = QuantityCalculator.CalculateQuantity(portfolioValue, riskPercentage, strategy.EntryPrice, strategy.StopLoss);
-                    var script = GenerateStrategyScript(strategy, quantity, symbol);
+                    int quantity = QuantityCalculator.CalculateQuantity(portfolioValue, riskPercentage, stock.Price ?? 0, stock.Price.Value * 0.95m);
+                    string script = StrategyScriptGenerator.GenerateScript(strategy, quantity, stock.Symbol);
 
-                    var strategySuccess = await _automationService.CreateStrategyAsync(strategy.StrategyName + " " + symbol, symbol, script, strategy.WebhookUrl, request.UserId);
-                    if (!strategySuccess)
+                    await Task.Delay(TimeSpan.FromSeconds(randomTime));
+
+                    bool buyAlertSuccess = false;
+                    bool sellAlertSuccess = false;
+
+                    if (!buyAlertSuccess)
                     {
-                        await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Strateji Oluşturma", "Hata", symbol, "Strateji oluşturulamadı.");
-                        continue;
+                        buyAlertSuccess = await _automationService.CreateAlertAsync(
+                            $"{stock.Symbol}/Buy/{strategy.StrategyName}",
+                            strategy.WebhookUrl,
+                            "buy",
+                            stock.Symbol,
+                            quantity,
+                            stock.Price.Value,
+                            request.BrokerAccountId,
+                            request.UserId);
+
+                        if (buyAlertSuccess)
+                        {
+                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Buy Alarm Oluşturma", "Başarılı", stock.Symbol, "Buy alarmı başarıyla oluşturuldu.");
+                        }
+                        else
+                        {
+                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Buy Alarm Oluşturma", "Hata", stock.Symbol, "Buy alarmı oluşturulamadı.");
+                        }
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    await Task.Delay(TimeSpan.FromSeconds(3));
 
-                    var alertSuccess = await _automationService.CreateAlertAsync(
-                        strategy.StrategyName + " " + symbol,
-                        strategy.WebhookUrl,
-                        "buy",
-                        symbol,
-                        quantity,
-                        strategy.EntryPrice,
-                        request.BrokerAccountId,
-                        request.UserId);
-
-                    if (!alertSuccess)
+                    if (!sellAlertSuccess)
                     {
-                        await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Çoklu Alarm Oluşturma", "Hata", symbol, "Alarm oluşturulamadı.");
-                        continue;
+                        sellAlertSuccess = await _automationService.CreateAlertAsync(
+                            $"{stock.Symbol}/Sell/{strategy.StrategyName}",
+                            strategy.WebhookUrl,
+                            "sell",
+                            stock.Symbol,
+                            quantity,
+                            stock.Price.Value,
+                            request.BrokerAccountId,
+                            request.UserId);
+
+                        if (sellAlertSuccess)
+                        {
+                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Sell Alarm Oluşturma", "Başarılı", stock.Symbol, "Sell alarmı başarıyla oluşturuldu.");
+                        }
+                        else
+                        {
+                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Sell Alarm Oluşturma", "Hata", stock.Symbol, "Sell alarmı oluşturulamadı.");
+                        }
                     }
 
-                    await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Çoklu Strateji Oluşturma", "Hata",symbol,"Strateji oluşturulamadı.");
+                    if (buyAlertSuccess && sellAlertSuccess)
+                    {
+                        await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturma", "Başarılı", stock.Symbol, "--->> Buy ve Sell alarmları başarıyla oluşturuldu.");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Çoklu Strateji Oluşturma", "Hata", symbol, $"Hata: {ex.Message}");
+                    await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Çoklu Strateji Oluşturma", "Hata", stock.Symbol, $"Hata: {ex.Message}");
                 }
             }
+
+
 
             return new SuccessResult("Strateji belirtilen hisselere başarıyla uygulandı.");
         }
 
-        private string GenerateStrategyScript(Strategy strategy, int quantity, string symbol)
-        {
-            return $@"
-//@version=6
-strategy(""{strategy.StrategyName}"", overlay=true)
-
-// Koşullar
-longCondition = close > {strategy.EntryPrice.ToString(CultureInfo.InvariantCulture)}
-if (longCondition)
-    strategy.entry(""Buy"", strategy.long, qty={quantity})
-
-shortCondition = close < {strategy.StopLoss.ToString(CultureInfo.InvariantCulture)}
-if (shortCondition)
-    strategy.entry(""Sell"", strategy.short, qty={quantity})
-
-// Hedef kar ve zarar sınırları
-if (close > {strategy.TakeProfit.ToString(CultureInfo.InvariantCulture)})
-    strategy.close(""Buy"")
-if (close < {strategy.StopLoss.ToString(CultureInfo.InvariantCulture)})
-    strategy.close(""Sell"")
-";
-        }
     }
 }

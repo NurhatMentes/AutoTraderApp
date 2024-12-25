@@ -124,7 +124,7 @@ public class AlphaVantageService : IAlphaVantageService
 
             if (!jsonData.TryGetProperty($"Time Series ({interval})", out var timeSeries))
             {
-                _logger.LogError("Intraday verileri alınamadı veya hatalı format.");
+                _logger.LogError("Gün içi verileri alınamadı veya hatalı format.");
                 return Enumerable.Empty<Price>();
             }
 
@@ -169,12 +169,10 @@ public class AlphaVantageService : IAlphaVantageService
             var content = await response.Content.ReadAsStringAsync();
             response.EnsureSuccessStatusCode();
 
-            // JSON verisini deserialize et
             var jsonData = JsonSerializer.Deserialize<JsonElement>(content);
 
             if (jsonData.TryGetProperty("top_gainers", out var gainersArray))
             {
-                // top_gainers dizisini işleyin
                 var gainers = gainersArray.EnumerateArray()
                     .Select(gainer => new GainerDto
                     {
@@ -184,6 +182,7 @@ public class AlphaVantageService : IAlphaVantageService
                         ChangePercentage = gainer.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(gainer.GetProperty("volume").GetString())
                     })
+                    .Take(15)
                     .ToList();
 
                 return gainers;
@@ -208,12 +207,10 @@ public class AlphaVantageService : IAlphaVantageService
             var content = await response.Content.ReadAsStringAsync();
             response.EnsureSuccessStatusCode();
 
-            // JSON verisini deserialize et
             var jsonData = JsonSerializer.Deserialize<JsonElement>(content);
 
             if (jsonData.TryGetProperty("top_losers", out var losersArray))
             {
-                // top_losers dizisini işleyin
                 var losers = losersArray.EnumerateArray()
                     .Select(loser => new LoserDto
                     {
@@ -223,6 +220,7 @@ public class AlphaVantageService : IAlphaVantageService
                         ChangePercentage = loser.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(loser.GetProperty("volume").GetString())
                     })
+                    .Take(15)
                     .ToList();
 
                 return losers;
@@ -247,12 +245,10 @@ public class AlphaVantageService : IAlphaVantageService
             var content = await response.Content.ReadAsStringAsync();
             response.EnsureSuccessStatusCode();
 
-            // JSON verisini deserialize et
             var jsonData = JsonSerializer.Deserialize<JsonElement>(content);
 
             if (jsonData.TryGetProperty("most_actively_traded", out var activeStocksArray))
             {
-                // most_actively_traded dizisini işleyin
                 var activeStocks = activeStocksArray.EnumerateArray()
                     .Select(activeStock => new ActiveStockDto
                     {
@@ -262,6 +258,7 @@ public class AlphaVantageService : IAlphaVantageService
                         ChangePercentage = activeStock.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(activeStock.GetProperty("volume").GetString())
                     })
+                    .Take(15)
                     .ToList();
 
                 return activeStocks;

@@ -27,7 +27,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         private readonly IAlpacaService _alpacaService;
         private readonly TradingViewLogService _logService;
         private readonly IBaseRepository<CombinedStock> _combinedStockRepository;
-        private readonly AlphaVantageService _alphaVantageService;
+        private readonly IAlphaVantageService _alphaVantageService;
         private readonly IMediator _mediator;
 
         public ApplyStrategyToMultipleStocksCommandHandler(
@@ -37,7 +37,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             IAlpacaService alpacaService,
             TradingViewLogService logService,
             IBaseRepository<CombinedStock> combinedStockRepository,
-            AlphaVantageService alphaVantageService,
+            IAlphaVantageService alphaVantageService,
             IMediator mediator)
         {
             _strategyRepository = strategyRepository;

@@ -9,6 +9,7 @@ using AutoTraderApp.Infrastructure.Interfaces;
 using AutoTraderApp.Infrastructure.Services.Alpaca;
 using AutoTraderApp.Infrastructure.Services.Automation;
 using AutoTraderApp.Infrastructure.Services.MarketData;
+using AutoTraderApp.Infrastructure.Services.Telegram;
 using AutoTraderApp.Infrastructure.Services.TradingView;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -92,6 +93,11 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             builder.RegisterType<TradingViewSignalLogService>()
                    .AsSelf()
                    .InstancePerLifetimeScope();
+
+            // Telegram
+            builder.RegisterType<TelegramBotService>()
+                .As<ITelegramBotService>()
+                .InstancePerLifetimeScope();
         }
     }
 }

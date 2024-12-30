@@ -61,9 +61,9 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 await _page.FillAsync("input[name='id_username']", tradingAccount.Email);
                 await Task.Delay(TimeSpan.FromSeconds(1));
                 await _page.FillAsync("input[name='id_password']", password);
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(2));
                 await _page.ClickAsync("button.submitButton-LQwxK8Bm");
-                await Task.Delay(TimeSpan.FromSeconds(30));
+                await Task.Delay(TimeSpan.FromMinutes(3));
 
                 if (await _page.IsVisibleAsync("div#rc-anchor-container"))
                 {

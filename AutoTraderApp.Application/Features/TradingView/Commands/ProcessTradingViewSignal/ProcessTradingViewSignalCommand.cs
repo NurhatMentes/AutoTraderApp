@@ -19,15 +19,18 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
         private readonly IAlpacaService _alpacaService;
         private readonly TradingViewSignalLogService _signalLogService;
+        private readonly ITelegramBotService _telegramBotService;
 
         public ProcessTradingViewSignalCommandHandler(
             IBaseRepository<BrokerAccount> brokerAccountRepository,
             IAlpacaService alpacaService,
-           TradingViewSignalLogService signalLogService)
+           TradingViewSignalLogService signalLogService,
+           ITelegramBotService telegramBotService)
         {
             _brokerAccountRepository = brokerAccountRepository;
             _alpacaService = alpacaService;
             _signalLogService = signalLogService;
+            _telegramBotService = telegramBotService;
         }
 
         public async Task<IResult> Handle(ProcessTradingViewSignalCommand request, CancellationToken cancellationToken)
@@ -62,9 +65,32 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
            signal.Symbol,
            signal.Quantity,
            signal.Price,
+
            "Alım Gerçekleşti",
            $"{signal.Symbol} hissesinden {signal.Quantity} adet sattın alındı ve işlendi."
-       );
+                    );
+
+                    //telegram notification
+                    var telegramUser = await _telegramBotService.GetUserByIdOrPhoneNumberAsync(signal.UserId,null);
+                    if (telegramUser?.ChatId != null)
+                    {
+                        var message = $"{signal.Symbol} Hissesinden {signal.Quantity} Adet Alım İşlemi Gerçekleşti:\n\n" +
+                                        $"Hisse: {signal.Symbol}\n" +
+                                        $"İşlem: {signal.Action}\n" +
+                                        $"Fiyat: {signal.Price}\n" +
+                                        $"Miktar: {signal.Quantity}";
+
+                        try
+                        {
+                            await _telegramBotService.SendMessageAsync(telegramUser.ChatId, message);
+
+                        }
+                        catch (Exception ex)
+                        {
+                            return new ErrorResult($"Telegram Mesaj gönderirken Hata Oluştu: {ex.Message}");
+                        }
+
+                    }
 
                     return new SuccessResult("Alış işlemi başarıyla gerçekleştirildi.");
                 }
@@ -96,6 +122,28 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
           "Satım Gerçekleşti",
           $"{signal.Symbol} hissesinden {signal.Quantity} adet sattıldı ve işlendi."
       );
+
+                    //telegram notification
+                    var telegramUser = await _telegramBotService.GetUserByIdOrPhoneNumberAsync(signal.UserId, null);
+                    if (telegramUser?.ChatId != null)
+                    {
+                        var message = $"{signal.Symbol} Hissesinden {signal.Quantity} Adet Satım İşlemi Gerçekleşti:\n\n" +
+                                        $"Hisse: {signal.Symbol}\n" +
+                                        $"İşlem: {signal.Action}\n" +
+                                        $"Fiyat: {signal.Price}\n" +
+                                        $"Miktar: {signal.Quantity}";
+
+                        try
+                        {
+                            await _telegramBotService.SendMessageAsync(telegramUser.ChatId, message);
+
+                        }
+                        catch (Exception ex)
+                        {
+                            return new ErrorResult($"Telegram Mesaj gönderirken Hata Oluştu: {ex.Message}");
+                        }
+
+                    }
 
                     return new SuccessResult("Satış işlemi başarıyla gerçekleştirildi.");
                 }

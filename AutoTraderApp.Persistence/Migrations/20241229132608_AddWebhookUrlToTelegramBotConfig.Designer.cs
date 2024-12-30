@@ -4,6 +4,7 @@ using AutoTraderApp.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutoTraderApp.Persistence.Migrations
 {
     [DbContext(typeof(AutoTraderAppDbContext))]
-    partial class AutoTraderAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241229132608_AddWebhookUrlToTelegramBotConfig")]
+    partial class AddWebhookUrlToTelegramBotConfig
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -650,9 +653,6 @@ namespace AutoTraderApp.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("varbinary(max)");
 
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ProfileImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -791,9 +791,6 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ChannelId")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ChatId")
                         .HasColumnType("nvarchar(max)");

@@ -80,11 +80,11 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             if (account == null)
                 return new ErrorResult("Kullanıcı hesabı bilgileri alınamadı.");
 
-            decimal portfolioValue = account.Cash;
-            Console.WriteLine($"---------------Hesap değeri: {portfolioValue}");
+            decimal accountValue = account.Equity;
+            Console.WriteLine($"---------------Hesap değeri: {accountValue}");
 
-            decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(portfolioValue);
-            var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, portfolioValue);
+            decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountValue);
+            var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
             Console.WriteLine($"---------------Risk yüzdesi: {riskPercentage}");
 
             foreach (var selectedStock in selectedStocks)
@@ -99,7 +99,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
 
                 try
                 {
-                    int quantity = QuantityCalculator.CalculateQuantity(portfolioValue, riskPercentage, stock.Price ?? 0, stock.Price.Value * 0.95m);
+                    int quantity = QuantityCalculator.CalculateQuantity(accountValue, riskPercentage, stock.Price ?? 0, stock.Price.Value * 0.95m);
                     string script = StrategyScriptGenerator.GenerateScript(strategy, quantity, stock.Symbol);
 
                     await Task.Delay(TimeSpan.FromSeconds(randomTime));

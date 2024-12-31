@@ -11,17 +11,17 @@ namespace AutoTraderApp.Application.Features.Strategies.Helpers
         /// Kullanıcının bakiyesine göre hisse seçim kriterlerini uygular.
         /// </summary>
         /// <param name="combinedStocks">Birleşik (kombine) hisse listesi.</param>
-        /// <param name="portfolioValue">Kullanıcının toplam hesap değeri.</param>
+        /// <param name="accountValue">Kullanıcının toplam hesap değeri.</param>
         /// <returns>Seçilen hisselerin listesi.</returns>
-        public static IEnumerable<CombinedStock> SelectStocks(IEnumerable<CombinedStock> combinedStocks, decimal portfolioValue)
+        public static IEnumerable<CombinedStock> SelectStocks(IEnumerable<CombinedStock> combinedStocks, decimal accountValue)
         {
             // Hisse fiyatı 50'nin altında olanları filtrele
-            var filteredStocks = portfolioValue < 500
+            var filteredStocks = accountValue < 500
                 ? combinedStocks.Where(cs => cs.Price <= 50).ToList()
                 : combinedStocks.ToList();
 
             // Bakiye oranına göre hisse seçimi
-            int selectionCount = portfolioValue switch
+            int selectionCount = accountValue switch
             {
                 <= 500 => (int)(filteredStocks.Count * 0.3), 
                 <= 1000 => (int)(filteredStocks.Count * 0.5),
@@ -35,11 +35,11 @@ namespace AutoTraderApp.Application.Features.Strategies.Helpers
         /// <summary>
         /// Kullanıcının hesap değerine göre risk yüzdesini belirler.
         /// </summary>
-        /// <param name="portfolioValue">Kullanıcının toplam hesap değeri.</param>
+        /// <param name="accountValue">Kullanıcının toplam hesap değeri.</param>
         /// <returns>Risk yüzdesi.</returns>
-        public static decimal CalculateRiskPercentage(decimal portfolioValue)
+        public static decimal CalculateRiskPercentage(decimal accountValue)
         {
-            if (portfolioValue < 500) return 0.07m;
+            if (accountValue < 500) return 0.07m;
             return 0.05m; 
         }
     }

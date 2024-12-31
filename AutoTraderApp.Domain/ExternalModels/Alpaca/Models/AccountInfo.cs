@@ -11,6 +11,9 @@ public class AccountInfo
     [JsonPropertyName("cash")]
     public decimal Cash { get; set; }
 
+    [JsonPropertyName("equity")]
+    public decimal Equity { get; set; }
+
     [JsonPropertyName("buying_power")]
     public decimal? BuyingPower { get; set; }
 

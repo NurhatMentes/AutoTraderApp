@@ -18,5 +18,7 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         Task<IResult> SellAllPositionsAtEndOfDayAsync(Guid brokerAccountId);
         Task<PositionResponse> GetPositionBySymbolAsync(string symbol, Guid brokerAccountId);
         Task<IResult> ClosePartialPositionAsync(string symbol, decimal quantity, Guid brokerAccountId);
+        Task<AssetDetails> GetAssetDetailsAsync(string symbol, Guid brokerAccountId);
+        Task<OrderResponse[]> GetAllOrdersAsync(Guid brokerAccountId);
     }
 }

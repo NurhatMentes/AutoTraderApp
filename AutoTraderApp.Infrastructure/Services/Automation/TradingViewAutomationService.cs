@@ -453,7 +453,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
             catch (Exception ex)
             {
                 Console.WriteLine($"Alarmlar silinirken hata oluştu: {ex.Message}");
-                return false;
+                return true;
             }
         }
 

@@ -4,6 +4,7 @@ using AutoTraderApp.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutoTraderApp.Persistence.Migrations
 {
     [DbContext(typeof(AutoTraderAppDbContext))]
-    partial class AutoTraderAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250102134155_AddAlpacaApiLog")]
+    partial class AddAlpacaApiLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -137,35 +140,6 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("BrokerAccounts", (string)null);
-                });
-
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("BrokerLogs");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.ClosedPosition", b =>

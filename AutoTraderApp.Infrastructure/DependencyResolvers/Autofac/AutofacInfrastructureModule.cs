@@ -60,7 +60,9 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             {
                 var httpClientFactory = ctx.Resolve<IHttpClientFactory>();
                 var brokerAccountRepository = ctx.Resolve<IBaseRepository<BrokerAccount>>();
-                return new AlpacaService(httpClientFactory, brokerAccountRepository);
+                var alpacaApiLogService = ctx.Resolve<IAlpacaApiLogService>();
+                var brokerLog = ctx.Resolve<IBaseRepository<BrokerLog>>();
+                return new AlpacaService(httpClientFactory, brokerAccountRepository, alpacaApiLogService, brokerLog);
             }).As<IAlpacaService>().InstancePerLifetimeScope();
 
 
@@ -98,6 +100,11 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             builder.RegisterType<TelegramBotService>()
                 .As<ITelegramBotService>()
                 .InstancePerLifetimeScope();
+
+            // AlpacaApiLogService register
+            builder.RegisterType<AlpacaApiLogService>()
+                   .As<IAlpacaApiLogService>()
+                   .InstancePerLifetimeScope();
         }
     }
 }

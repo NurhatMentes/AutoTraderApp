@@ -117,6 +117,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                     bool buyAlertSuccess = false;
                     bool sellAlertSuccess = false;
 
+                    decimal price = Convert.ToDecimal(stock.Price.Value);
                     if (!buyAlertSuccess)
                     {
                         buyAlertSuccess = await _automationService.CreateAlertAsync(
@@ -125,7 +126,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                             "buy",
                             stock.Symbol,
                             quantity,
-                            stock.Price.Value,
+                            price,
                             request.BrokerAccountId,
                             request.UserId);
 
@@ -149,7 +150,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                             "sell",
                             stock.Symbol,
                             quantity,
-                            stock.Price.Value,
+                            price,
                             request.BrokerAccountId,
                             request.UserId);
 

@@ -5,6 +5,7 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -17,15 +18,21 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
+        private readonly IAlpacaApiLogService _alpacaApiLogService;
+        private readonly IBaseRepository<BrokerLog> _brokerLog;
 
         private readonly ConcurrentDictionary<Guid, HttpClient> _httpClientCache = new();
 
         public AlpacaService(
             IHttpClientFactory httpClientFactory,
-            IBaseRepository<BrokerAccount> brokerAccountRepository)
+            IBaseRepository<BrokerAccount> brokerAccountRepository,
+            IAlpacaApiLogService alpacaApiLogService,
+            IBaseRepository<BrokerLog> brokerLog)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _brokerAccountRepository = brokerAccountRepository ?? throw new ArgumentNullException(nameof(brokerAccountRepository));
+            _alpacaApiLogService = alpacaApiLogService;
+            _brokerLog = brokerLog;
         }
 
         private async Task<HttpClient> ConfigureHttpClientAsync(Guid brokerAccountId)
@@ -77,6 +84,18 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                     throw new Exception("Hesap bilgileri boş geldi.");
                 }
 
+                // Log işlemi
+                await _alpacaApiLogService.LogAsync(new AlpacaApiLog
+                {
+                    BrokerAccountId = brokerAccountId,
+                    RequestUrl = "v2/account",
+                    HttpMethod = "GET",
+                    ResponseBody = responseContent,
+                    ResponseStatusCode = (int)response.StatusCode,
+                    CreatedAt = DateTime.UtcNow,
+                    LogType = response.IsSuccessStatusCode ? "Info" : "Error"
+                });
+
                 return accountInfo;
             }
             catch (JsonException ex)
@@ -107,10 +126,37 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                     throw new Exception("Alpaca API yanıtı boş döndü.");
                 }
 
+                // Log işlemi
+                await   _brokerLog.AddAsync(new BrokerLog
+                {
+                    BrokerAccountId = brokerAccountId,
+                    Message = $"Yeni emir oluşturuldu: {orderResponse.Symbol} - {orderResponse.Quantity} adet",
+
+                });
+
+                await _alpacaApiLogService.LogAsync(new AlpacaApiLog
+                {
+                    BrokerAccountId = brokerAccountId,
+                    RequestUrl = "v2/orders",
+                    HttpMethod = "POST",
+                    RequestBody = JsonSerializer.Serialize(orderRequest),
+                    ResponseBody = responseContent,
+                    ResponseStatusCode = (int)response.StatusCode,
+                    CreatedAt = DateTime.UtcNow,
+                    LogType = response.IsSuccessStatusCode ? "Info" : "Error"
+                });
+
                 return orderResponse;
             }
             catch (Exception ex)
             {
+                // Log işlemi
+                await _brokerLog.AddAsync(new BrokerLog
+                {
+                    BrokerAccountId = brokerAccountId,
+                    Message = $"Emir Oluştulurken hata Oldu:{ex.Message} - Yanıt: {responseContent}",
+
+                });
                 throw new Exception($"JSON deserialize sırasında bir hata oluştu: {ex.Message} - Yanıt: {responseContent}");
             }
         }
@@ -267,7 +313,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Pozisyon bilgisi alınamadı: {response.StatusCode} - {errorContent}");
+                Console.WriteLine($"Pozisyon bilgisi alınamadı: {response.StatusCode} - {errorContent}");
             }
 
             return await response.Content.ReadFromJsonAsync<PositionResponse>();
@@ -352,7 +398,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 {
                     Console.WriteLine($"Zarara düşen pozisyon tespit edildi. Symbol: {position.Symbol}, Zarar Yüzdesi: {position.UnrealizedPnLPercentage}%");
 
-                    var closeResult = await ClosePositionAsync(position.Symbol,null, brokerAccountId);
+                    var closeResult = await ClosePositionAsync(position.Symbol, null, brokerAccountId);
 
                     if (closeResult.Success)
                     {
@@ -398,6 +444,18 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 Console.WriteLine($"Tüm pozisyonları kapatma sırasında hata: {ex.Message}");
                 return new ErrorResult($"Tüm pozisyonları kapatma sırasında hata: {ex.Message}");
             }
+        }
+
+        public async Task<AssetDetails> GetAssetDetailsAsync(string symbol, Guid brokerAccountId)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var response = await httpClient.GetAsync($"/v2/assets/{symbol}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Varlık bilgisi alınamadı: {response.StatusCode} - {errorContent}");
+            }
+            return await response.Content.ReadFromJsonAsync<AssetDetails>();
         }
 
     }

@@ -29,6 +29,8 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<CombinedStock> combinedStocks { get; set; }
         public DbSet<TelegramUser> TelegramUsers { get; set; }
         public DbSet<TelegramBotConfig> TelegramBotConfigs { get; set; }
+        public DbSet<AlpacaApiLog> AlpacaApiLoga { get; set; }
+        public DbSet<BrokerLog> BrokerLogs { get; set; }
 
 
 

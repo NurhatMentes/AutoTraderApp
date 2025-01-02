@@ -351,13 +351,13 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     throw new Exception("Alert adı input'u bulunamadı.");
                 await alertNameInput.FillAsync(strategyName);
 
-                // Expiration Ayarla (1 Ay Sonraya)
+                // Expiration Ayarla (8 Saat Sonraya)
                 Console.WriteLine("Expiration tarihi ayarlanıyor...");
                 var expirationButton = await _page.QuerySelectorAsync("button[aria-controls='alert-editor-expiration-popup']");
                 if (expirationButton != null)
                 {
                     await expirationButton.ClickAsync();
-                    var expirationDate = DateTime.UtcNow.AddMonths(1).ToString("MMMM dd, yyyy 'at' HH:mm", CultureInfo.InvariantCulture);
+                    var expirationDate = DateTime.UtcNow.AddHours(8).ToString("MMMM dd, yyyy 'at' HH:mm", CultureInfo.InvariantCulture);
                     await _page.EvaluateAsync($"() => document.querySelector('button[aria-controls=\"alert-editor-expiration-popup\"] .content-H6_2ZGVv').innerText = '{expirationDate}'");
                 }
 
@@ -405,59 +405,6 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
             }
         }
 
-
-
-
-        public async Task<bool> ApplyStrategiesToMultipleSymbolsAsync(string strategyName, string script, string webhookUrl, List<string> symbols, Guid userId)
-        {
-            if (!_cacheManager.Get<bool>($"TradingViewSession_{userId}"))
-            {
-                Console.WriteLine("Kullanıcı oturumu açık değil. Strateji oluşturma iptal ediliyor.");
-                return false;
-            }
-
-            foreach (var symbol in symbols)
-            {
-                try
-                {
-                    Console.WriteLine($"Strateji uygulanıyor: {symbol}");
-
-                    // Strateji oluşturma
-                    var strategyApplied = await CreateStrategyAsync(strategyName, symbol, script, webhookUrl, userId);
-                    if (!strategyApplied)
-                    {
-                        Console.WriteLine($"Strateji oluşturulamadı: {symbol}");
-                        continue;
-                    }
-
-                    // Alarm oluşturma
-                    var alertCreated = await CreateAlertAsync(
-                        strategyName,
-                        webhookUrl,
-                        "buy", // Örnek işlem
-                        symbol,
-                        quantity: 100, // Varsayılan miktar
-                        price: 0.0m, // Varsayılan fiyat
-                        brokerAccountId: Guid.NewGuid(), // Test ID
-                        userId: userId);
-
-                    if (!alertCreated)
-                    {
-                        Console.WriteLine($"Alarm oluşturulamadı: {symbol}");
-                        continue;
-                    }
-
-                    Console.WriteLine($"Strateji ve alarm başarıyla uygulandı: {symbol}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Hata oluştu: {ex.Message} - Sembol: {symbol}");
-                }
-            }
-
-            return true;
-        }
-
         public static string ConvertCommasInNumericValues(string script)
         {
             // Regex pattern to match floating point numbers with commas
@@ -469,6 +416,47 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 return match.Value.Replace(",", ".");
             });
         }
+
+        public async Task<bool> DeleteAllAlertsAsync()
+        {
+            try
+            {
+                if (_page == null)
+                    throw new Exception("TradingView sayfası yüklenemedi.");
+
+                Console.WriteLine("TradingView'deki tüm alarmlar siliniyor...");
+
+                // Alerts settings butonuna tıkla
+                var alertsButton = await _page.QuerySelectorAsync("div[data-name='alerts-settings-button']");
+                if (alertsButton == null)
+                    throw new Exception("Alerts settings butonu bulunamadı.");
+                await alertsButton.ClickAsync();
+                await Task.Delay(TimeSpan.FromSeconds(3));
+
+                // Delete all inactive alarmları bul ve tıkla
+                var deleteInactiveButton = await _page.QuerySelectorAsync("span.label-xZRtm41u:has-text('Delete all inactive')");
+                if (deleteInactiveButton == null)
+                    throw new Exception("Delete all inactive butonu bulunamadı.");
+                await deleteInactiveButton.ClickAsync();
+                await Task.Delay(TimeSpan.FromSeconds(2));
+
+                // Açılan onay kutusunda "Delete" butonuna tıkla
+                var confirmDeleteButton = await _page.QuerySelectorAsync("span.content-D4RPB3ZC:has-text('Delete')");
+                if (confirmDeleteButton == null)
+                    throw new Exception("Delete onay butonu bulunamadı.");
+                await confirmDeleteButton.ClickAsync();
+                await Task.Delay(TimeSpan.FromSeconds(3));
+
+                Console.WriteLine("Tüm TradingView alarmları başarıyla silindi.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Alarmlar silinirken hata oluştu: {ex.Message}");
+                return false;
+            }
+        }
+
 
 
         public void Dispose()

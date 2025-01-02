@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 using AutoTraderApp.Infrastructure.DependencyResolvers.Autofac;
+using AutoTraderApp.Infrastructure.Services.Alpaca;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -120,7 +121,7 @@ builder.Services.AddLogging(config =>
     config.AddDebug();
 });
 
-
+builder.Services.AddSingleton<ScheduledTaskService>();
 
 var app = builder.Build();
 
@@ -130,7 +131,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.Services.GetRequiredService<ScheduledTaskService>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

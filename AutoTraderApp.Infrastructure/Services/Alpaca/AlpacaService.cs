@@ -1,4 +1,5 @@
-﻿using AutoTraderApp.Core.Utilities.Repositories;
+﻿using Alpaca.Markets;
+using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
@@ -49,6 +50,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             _httpClientCache.TryAdd(brokerAccountId, client);
             return client;
         }
+
 
         public async Task<AccountInfo> GetAccountInfoAsync(Guid brokerAccountId)
         {
@@ -230,29 +232,72 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             }).ToList();
         }
 
-        public async Task<IResult> ClosePositionAsync(string symbol, decimal quantity, Guid brokerAccountId)
+        public async Task<IResult> ClosePositionAsync(string symbol, decimal? quantity, Guid brokerAccountId)
         {
+            Console.WriteLine($"Pozisyon kapatma işlemi başlıyor. Symbol: {symbol}, BrokerAccountId: {brokerAccountId}");
+
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
 
-            var response = await httpClient.PostAsync($"/v2/positions/{symbol}/close",
-                    new StringContent(JsonSerializer.Serialize(new { qty = quantity }), Encoding.UTF8, "application/json"));
+            try
+            {
+                var response = await httpClient.DeleteAsync($"/v2/positions/{symbol}");
+                var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    return new ErrorResult($"Alpaca API hatası: {response.StatusCode} - {errorContent}");
+                    Console.WriteLine($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
+                    return new ErrorResult($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
                 }
 
-                return new SuccessResult("Pozisyon Alpaca üzerinde kapatıldı.");
+                Console.WriteLine($"Pozisyon başarıyla kapatıldı: {symbol}");
+                return new SuccessResult($"Pozisyon başarıyla kapatıldı. Symbol: {symbol}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Pozisyon kapatma sırasında hata: {ex.Message}");
+                return new ErrorResult($"Pozisyon kapatma sırasında hata: {ex.Message}");
+            }
         }
 
+
+        public async Task<PositionResponse> GetPositionBySymbolAsync(string symbol, Guid brokerAccountId)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var response = await httpClient.GetAsync($"/v2/positions/{symbol}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Pozisyon bilgisi alınamadı: {response.StatusCode} - {errorContent}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<PositionResponse>();
+        }
+
+        public async Task<IResult> ClosePartialPositionAsync(string symbol, decimal quantity, Guid brokerAccountId)
+        {
+            var position = await GetPositionBySymbolAsync(symbol, brokerAccountId);
+
+            if (Convert.ToDecimal(position.AvailableQuantity) == 0)
+                return new ErrorResult($"Hisse {symbol} için kullanılabilir miktar sıfır.");
+
+            var closeQuantity = Math.Min(quantity, Convert.ToDecimal(position.AvailableQuantity));
+            return await ClosePositionAsync(symbol, closeQuantity, brokerAccountId);
+        }
+
+
+        public async Task<List<OrderResponse>> GetRecentOrders(Guid brokerAccountId)
+        {
+            var orders = await GetFilledOrdersAsync(brokerAccountId, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow);
+            Console.WriteLine($"Son 5 dakika içinde gerçekleşen emirler: {JsonSerializer.Serialize(orders)}");
+            return orders;
+        }
 
 
         public async Task<OrderResponse> CancelOrderAsync(string orderId, Guid brokerAccountId)
         {
-        var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
 
-        var response = await httpClient.DeleteAsync($"v2/orders/{orderId}");
+            var response = await httpClient.DeleteAsync($"v2/orders/{orderId}");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<OrderResponse>();
         }
@@ -286,5 +331,74 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
             return await response.Content.ReadFromJsonAsync<Position[]>();
         }
+
+        public async Task<IResult> SellLossMakingPositionsAsync(Guid brokerAccountId, decimal lossThresholdPercentage = -5)
+        {
+            Console.WriteLine($"Zarara uğrayan hisseler satılmaya başlıyor. BrokerAccountId: {brokerAccountId}, Zarar Eşiği: %{lossThresholdPercentage}");
+
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            var positions = await GetPositionsAsync(brokerAccountId);
+
+            if (positions == null || !positions.Any())
+            {
+                Console.WriteLine("Hiçbir açık pozisyon bulunamadı.");
+                return new ErrorResult("Hiçbir açık pozisyon bulunamadı.");
+            }
+
+            foreach (var position in positions)
+            {
+                if (Convert.ToDecimal(position.UnrealizedPnLPercentage) <= lossThresholdPercentage)
+                {
+                    Console.WriteLine($"Zarara düşen pozisyon tespit edildi. Symbol: {position.Symbol}, Zarar Yüzdesi: {position.UnrealizedPnLPercentage}%");
+
+                    var closeResult = await ClosePositionAsync(position.Symbol,null, brokerAccountId);
+
+                    if (closeResult.Success)
+                    {
+                        Console.WriteLine($"Pozisyon başarıyla kapatıldı: {position.Symbol}, Miktar: {position.Quantity}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Pozisyon kapatılırken hata oluştu: {position.Symbol}, Hata: {closeResult.Message}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Pozisyon zarar eşiğinin üzerinde: {position.Symbol}, Zarar Yüzdesi: {position.UnrealizedPnLPercentage}%");
+                }
+            }
+
+            return new SuccessResult("Zarara düşen pozisyonlar başarıyla elden çıkarıldı.");
+        }
+
+
+        public async Task<IResult> SellAllPositionsAtEndOfDayAsync(Guid brokerAccountId)
+        {
+            Console.WriteLine($"Tüm pozisyonları kapatma işlemi başlıyor. BrokerAccountId: {brokerAccountId}");
+
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            try
+            {
+                var response = await httpClient.DeleteAsync("/v2/positions");
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
+                    return new ErrorResult($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
+                }
+
+                Console.WriteLine("Tüm pozisyonlar başarıyla kapatıldı.");
+                return new SuccessResult("Tüm pozisyonlar başarıyla kapatıldı.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Tüm pozisyonları kapatma sırasında hata: {ex.Message}");
+                return new ErrorResult($"Tüm pozisyonları kapatma sırasında hata: {ex.Message}");
+            }
+        }
+
     }
 }

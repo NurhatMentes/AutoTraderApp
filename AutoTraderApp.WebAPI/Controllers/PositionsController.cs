@@ -33,11 +33,14 @@ namespace AutoTraderApp.WebAPI.Controllers
             return Ok(result);
         }
 
-        [HttpPost("alpaca/get_close_positions/{brokerAccountId}")]
+        [HttpPost("alpaca/close_position")]
         public async Task<IActionResult> ClosePosition([FromBody] ClosePositionCommand request)
         {
             var result = await _mediator.Send(request);
-            return Ok(result);
+            if (result.Success)
+                return Ok(result);
+            return BadRequest(result);
         }
+
     }
 }

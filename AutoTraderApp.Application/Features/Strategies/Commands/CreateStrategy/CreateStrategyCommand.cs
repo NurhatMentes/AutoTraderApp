@@ -28,7 +28,6 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateStrategy
             {
                 try
                 {
-                    // Stratejiyi oluştur
                     var strategy = new Strategy
                     {
                         StrategyName = request.createStrategyDto.StrategyName,
@@ -52,7 +51,6 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateStrategy
                         StochRsiLower = request.createStrategyDto.StochRsiLower
                     };
 
-                    // Veritabanına ekle
                     await _strategyRepository.AddAsync(strategy);
 
                     return new SuccessResult("Strateji başarıyla oluşturuldu.");

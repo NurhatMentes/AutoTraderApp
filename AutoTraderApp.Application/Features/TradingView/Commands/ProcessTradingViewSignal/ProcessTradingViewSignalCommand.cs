@@ -1,5 +1,4 @@
-﻿// Updated ProcessTradingViewSignalCommandHandler
-using AutoTraderApp.Application.Features.Strategies.Helpers;
+﻿using AutoTraderApp.Application.Features.Strategies.Helpers;
 using AutoTraderApp.Application.Features.TradingView.DTOs;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
@@ -42,7 +41,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
         public async Task<IResult> Handle(ProcessTradingViewSignalCommand request, CancellationToken cancellationToken)
         {
             var signal = request.Signal;
-            var transactionId = Guid.NewGuid(); // Unique Transaction ID for tracking
+            var transactionId = Guid.NewGuid(); 
 
             try
             {
@@ -87,6 +86,9 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 // Retry mekanizması ile işlem yap
                 await ExecuteWithRetry(async () =>
                 {
+                    // Zarar eden pozisyonları sat
+                    await _alpacaService.SellLossMakingPositionsAsync(brokerAccount.Id);
+
                     if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
                     {
                         if (existingPosition != null && Convert.ToInt32(existingPosition.Quantity) > 0)

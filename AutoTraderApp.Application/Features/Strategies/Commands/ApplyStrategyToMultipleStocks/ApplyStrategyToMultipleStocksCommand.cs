@@ -7,7 +7,9 @@ using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
+using AutoTraderApp.Infrastructure.Services.Alpaca;
 using AutoTraderApp.Infrastructure.Services.MarketData;
+using AutoTraderApp.Infrastructure.Services.TradingView;
 using MediatR;
 
 namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyToMultipleStocks
@@ -52,6 +54,12 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
 
         public async Task<IResult> Handle(ApplyStrategyToMultipleStocksCommand request, CancellationToken cancellationToken)
         {
+            // Gün sonunda alarmları temizle
+            Console.WriteLine("Tüm TradingView alarmları temizleniyor...");
+            var deleteAlertsResult = await _automationService.DeleteAllAlertsAsync();
+            if (!deleteAlertsResult)
+                return new ErrorResult("TradingView alarmları temizlenemedi.");
+
             // UpdateCombinedStockListCommand çalıştırılıyor
             var updateResult = await _mediator.Send(new UpdateCombinedStockListCommand());
             if (!updateResult)
@@ -82,6 +90,8 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
 
             decimal accountValue = account.Equity;
             Console.WriteLine($"---------------Hesap değeri: {accountValue}");
+
+
 
             decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountValue);
             var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);

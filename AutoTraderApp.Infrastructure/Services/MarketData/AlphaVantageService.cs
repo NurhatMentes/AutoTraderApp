@@ -34,16 +34,11 @@ public class AlphaVantageService : IAlphaVantageService
         };
     }
 
-    public async Task<decimal?> GetCurrentPrice(string symbol)
+    public async Task<string?> GetCurrentPrice(string symbol)
     {
-        var cacheKey = $"price_{symbol}";
-
-        if (_cacheManager.IsAdd(cacheKey))
-            return _cacheManager.Get<decimal>(cacheKey);
-
         try
         {
-            var url = $"query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={_apiKey}";
+            var url = $"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={_apiKey}";
             var response = await _httpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
 
@@ -53,8 +48,7 @@ public class AlphaVantageService : IAlphaVantageService
             if (quote.TryGetProperty("Global Quote", out var globalQuote) &&
                 globalQuote.TryGetProperty("05. price", out var priceElement))
             {
-                var price = decimal.Parse(priceElement.GetString());
-                _cacheManager.Add(cacheKey, price, 1);
+                var price = priceElement.GetString();
                 return price;
             }
 
@@ -177,8 +171,8 @@ public class AlphaVantageService : IAlphaVantageService
                     .Select(gainer => new GainerDto
                     {
                         Ticker = gainer.GetProperty("ticker").GetString(),
-                        Price = decimal.Parse(gainer.GetProperty("price").GetString()),
-                        ChangeAmount = decimal.Parse(gainer.GetProperty("change_amount").GetString()),
+                        Price = gainer.GetProperty("price").GetString(),
+                        ChangeAmount = gainer.GetProperty("change_amount").GetString(),
                         ChangePercentage = gainer.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(gainer.GetProperty("volume").GetString())
                     })
@@ -215,8 +209,8 @@ public class AlphaVantageService : IAlphaVantageService
                     .Select(loser => new LoserDto
                     {
                         Ticker = loser.GetProperty("ticker").GetString(),
-                        Price = decimal.Parse(loser.GetProperty("price").GetString()),
-                        ChangeAmount = decimal.Parse(loser.GetProperty("change_amount").GetString()),
+                        Price = loser.GetProperty("price").GetString(),
+                        ChangeAmount = loser.GetProperty("change_amount").GetString(),
                         ChangePercentage = loser.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(loser.GetProperty("volume").GetString())
                     })
@@ -253,8 +247,8 @@ public class AlphaVantageService : IAlphaVantageService
                     .Select(activeStock => new ActiveStockDto
                     {
                         Ticker = activeStock.GetProperty("ticker").GetString(),
-                        Price = decimal.Parse(activeStock.GetProperty("price").GetString()),
-                        ChangeAmount = decimal.Parse(activeStock.GetProperty("change_amount").GetString()),
+                        Price = activeStock.GetProperty("price").GetString(),
+                        ChangeAmount = activeStock.GetProperty("change_amount").GetString(),
                         ChangePercentage = activeStock.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(activeStock.GetProperty("volume").GetString())
                     })

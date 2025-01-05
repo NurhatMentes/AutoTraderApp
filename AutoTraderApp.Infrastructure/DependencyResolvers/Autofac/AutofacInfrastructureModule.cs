@@ -5,10 +5,12 @@ using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Core.Utilities.Settings;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
+using AutoTraderApp.Domain.ExternalModels.Polygon;
 using AutoTraderApp.Infrastructure.Interfaces;
 using AutoTraderApp.Infrastructure.Services.Alpaca;
 using AutoTraderApp.Infrastructure.Services.Automation;
 using AutoTraderApp.Infrastructure.Services.MarketData;
+using AutoTraderApp.Infrastructure.Services.Polygon;
 using AutoTraderApp.Infrastructure.Services.Telegram;
 using AutoTraderApp.Infrastructure.Services.TradingView;
 using Microsoft.Extensions.Configuration;
@@ -105,6 +107,12 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             builder.RegisterType<AlpacaApiLogService>()
                    .As<IAlpacaApiLogService>()
                    .InstancePerLifetimeScope();
+
+            // Polygon
+            builder.RegisterType<PolygonService>()
+                   .As<IPolygonService>()
+                   .InstancePerLifetimeScope();
+
         }
     }
 }

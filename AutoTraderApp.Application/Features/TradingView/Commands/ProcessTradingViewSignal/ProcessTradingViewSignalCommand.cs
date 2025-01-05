@@ -24,6 +24,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
         private readonly TradingViewSignalLogService _signalLogService;
         private readonly ITelegramBotService _telegramBotService;
         private readonly IBaseRepository<CombinedStock> _combinedStockRepository;
+        private readonly IPolygonService _polygonService;
 
         public ProcessTradingViewSignalCommandHandler(
             IBaseRepository<BrokerAccount> brokerAccountRepository,
@@ -31,7 +32,8 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
             TradingViewSignalLogService signalLogService,
             ITelegramBotService telegramBotService,
             IBaseRepository<CombinedStock> combinedStockRepository,
-            IBaseRepository<BrokerLog> brokerLog)
+            IBaseRepository<BrokerLog> brokerLog,
+            IPolygonService polygonService)
         {
             _brokerAccountRepository = brokerAccountRepository;
             _alpacaService = alpacaService;
@@ -39,16 +41,17 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
             _telegramBotService = telegramBotService;
             _combinedStockRepository = combinedStockRepository;
             _brokerLog = brokerLog;
+            _polygonService = polygonService;
         }
 
         public async Task<IResult> Handle(ProcessTradingViewSignalCommand request, CancellationToken cancellationToken)
         {
             var signal = request.Signal;
-            var transactionId = Guid.NewGuid(); 
+            var transactionId = Guid.NewGuid();
+           
 
             try
             {
-                // Broker hesabını doğrula
                 var brokerAccount = await _brokerAccountRepository.GetAsync(b => b.Id == signal.BrokerAccountId && b.UserId == signal.UserId);
                 if (brokerAccount == null)
                     return new ErrorResult("Geçerli bir broker hesabı bulunamadı.");
@@ -60,15 +63,18 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 }
 
                 // ABD borsa saatleri kontrolü (Türkiye saatine göre)
-                var nowTurkeyTime = DateTime.UtcNow.AddHours(3); // UTC+3 Türkiye Saati
+                var nowTurkeyTime = DateTime.UtcNow.AddHours(3);
                 var marketOpen = new TimeSpan(16, 30, 0);
-                var marketClose = new TimeSpan(23, 30, 0);
+                var marketClose = new TimeSpan(23, 35, 0);
                 if (nowTurkeyTime.TimeOfDay < marketOpen || nowTurkeyTime.TimeOfDay > marketClose)
                     return new ErrorResult("Borsa saatleri dışında sinyal işlenemez.");
 
                 // Mevcut pozisyonları kontrol et
                 var openPositions = await _alpacaService.GetPositionsAsync(brokerAccount.Id);
                 var existingPosition = openPositions.FirstOrDefault(p => p.Symbol == signal.Symbol);
+
+                var latestPrice = await _alpacaService.GetLatestPriceAsync(signal.Symbol, signal.BrokerAccountId);
+                Console.WriteLine($"{signal.Action} - {latestPrice} - {signal.Symbol}");
 
                 // Risk kontrolü
                 var account = await _alpacaService.GetAccountInfoAsync(brokerAccount.Id);
@@ -78,20 +84,31 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 decimal accountValue = account.Equity;
                 Console.WriteLine($"TransactionId: {transactionId} - Hesap değeri: {accountValue}");
 
+
+                //risk kontrolü
                 decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountValue);
                 var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
+                Console.WriteLine($"Account Equity: {account.Equity}");
+                Console.WriteLine($"Buying Power: {account.BuyingPower}");
+                Console.WriteLine($"Risk Percentage: {riskPercentage}");
+                Console.WriteLine($"Calculated Risk Limit: {account.Equity * riskPercentage}");
+                Console.WriteLine($"Signal Quantity: {signal.Quantity}");
+                Console.WriteLine($"Latest Price: {latestPrice}");
+                Console.WriteLine($"Signal Total Value: {signal.Quantity * latestPrice}");
+                Console.WriteLine($"Buying Power: {account.BuyingPower}, Signal Total Cost: {signal.Quantity * latestPrice}, Risk Limit: {account.Equity * riskPercentage}");
 
-                if (signal.Quantity * signal.Price > account.BuyingPower * riskPercentage)
+
+                if (signal.Quantity * latestPrice > account.Equity * riskPercentage)
                 {
-                    return new ErrorResult($"Risk limiti aşıldı: {signal.Symbol}");
+                    return new ErrorResult($"Risk limiti aşıldı: {signal.Symbol}. Sinyal Toplam Maliyeti: {signal.Quantity * latestPrice}, Risk Limiti: {account.Equity * riskPercentage}");
                 }
 
                 // alım gücünü doğrula
                 var accountInfo = await _alpacaService.GetAccountInfoAsync(signal.BrokerAccountId);
-                if (accountInfo == null || accountInfo.BuyingPower < signal.Quantity * signal.Price)
+                if (accountInfo == null || accountInfo.BuyingPower < signal.Quantity * latestPrice)
                 {
-                    Console.WriteLine($"Yetersiz alım gücü: Mevcut {accountInfo?.BuyingPower}, Gerekli {signal.Quantity * signal.Price}");
-                    return new ErrorResult($"Yetersiz alım gücü: Mevcut {accountInfo?.BuyingPower}, Gerekli {signal.Quantity * signal.Price}");
+                    Console.WriteLine($"Yetersiz alım gücü: Mevcut {accountInfo?.BuyingPower}, Gerekli {signal.Quantity * latestPrice}");
+                    return new ErrorResult($"Yetersiz alım gücü: Mevcut {accountInfo?.BuyingPower}, Gerekli {signal.Quantity * latestPrice}");
                 }
 
                 // Mevcut açık emirleri kontrol et
@@ -120,27 +137,54 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
                 // Mevcut pozisyon miktarını kontrol et
                 var position = await _alpacaService.GetPositionBySymbolAsync(signal.Symbol, signal.BrokerAccountId);
+                if (position == null || Convert.ToDecimal(position.AvailableQuantity) == 0)
+                {
+                    Console.WriteLine($"Satılacak pozisyon bulunamadı: {signal.Symbol}");
+                    return new ErrorResult($"{signal.Symbol} hissesi için açık bir pozisyon bulunamadı.");
+                }
                 if (signal.Action == "SELL" && Convert.ToDecimal(position.AvailableQuantity) < signal.Quantity)
                 {
-                    return new ErrorResult($"Yetersiz miktar: Mevcut {position.AvailableQuantity}, Gerekli {signal.Quantity}");
+                    Console.WriteLine($"Yetersiz miktar: Mevcut {position.AvailableQuantity}, Gerekli {signal.Quantity}");
+
+                    var sellQuantity = Math.Min(signal.Quantity, Convert.ToDecimal(position.AvailableQuantity));
+                    signal.Quantity = Convert.ToInt32(sellQuantity);
+                    Console.WriteLine($"Yeni satılacak miktat: {signal.Quantity}");
                 }
 
                 Console.WriteLine(signal.Action + "Sinyali Alındı: " + signal.Symbol);
+
+             
+
                 // Retry mekanizması ile işlem yap
                 await ExecuteWithRetry(async () =>
                 {
-                    // Zarar eden pozisyonları kontrol et ve sat
-                    var sellLossResult = await _alpacaService.SellLossMakingPositionsAsync(brokerAccount.Id);
+                    // Güncel fiyatın alınması
+                    var basePrice = Convert.ToDecimal(latestPrice);
 
-                    var basePrice = signal.Price; // Gelen fiyat
-                    var calculatedStopPrice = Math.Min(basePrice * 0.95m, basePrice - 0.01m); // %5 zarar durdurma hedefi veya Alpaca kuralı
+                    // Minimum artış kurallarına uygun değer belirleme
+                    var minIncrement = basePrice < 1.00M ? 0.01M : (basePrice < 100.00M ? 0.01M : 0.1M);
 
-                    // Alpaca'nın izin verdiği minimum stop_price doğrulaması
-                    if (calculatedStopPrice > basePrice - 0.01m)
+                    // Stop Loss ve Take Profit hesaplama
+                    var calculatedStopPrice = basePrice - (basePrice * 6/100);
+                    var calculatedTakeProfitPrice = basePrice * (basePrice * 50 / 100);
+
+                    // Alpaca'nın artış kriterlerine uygun hale getirme
+                    calculatedStopPrice = Math.Floor(calculatedStopPrice / minIncrement) * minIncrement;
+                    calculatedTakeProfitPrice = Math.Floor(calculatedTakeProfitPrice / minIncrement) * minIncrement;
+
+                    // Alpaca'nın minimum artış kurallarına zorla uyum
+                    if (calculatedStopPrice >= basePrice)
                     {
-                        calculatedStopPrice = basePrice - 0.01m;
+                        calculatedStopPrice = Math.Floor((basePrice - minIncrement) / minIncrement) * minIncrement;
                     }
 
+                    if (calculatedTakeProfitPrice <= calculatedStopPrice)
+                    {
+                        calculatedTakeProfitPrice = Math.Ceiling((calculatedStopPrice + minIncrement) / minIncrement) * minIncrement;
+                    }
+
+
+                    // Alım işlemi
                     if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
                     {
                         var orderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
@@ -157,10 +201,9 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                             },
                             TakeProfit = new TakeProfit
                             {
-                                LimitPrice = signal.Price * 1.50m 
+                                LimitPrice = calculatedTakeProfitPrice
                             }
                         });
-
 
                         await _brokerLog.AddAsync(new BrokerLog
                         {
@@ -192,15 +235,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                             Side = "sell",
                             Type = "market",
                             TimeInForce = "gtc",
-                            OrderClass = "bracket",
-                            StopLoss = new StopLoss
-                            {
-                                StopPrice = calculatedStopPrice 
-                            },
-                            TakeProfit = new TakeProfit
-                            {
-                                LimitPrice = signal.Price * 1.50m 
-                            }
+                            OrderClass = "simple"
                         });
 
                         await _brokerLog.AddAsync(new BrokerLog
@@ -248,13 +283,14 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
         private async Task NotifyAndLog(TradingViewSignalDto signal, Guid transactionId, string logTitle, string logMessage, string action)
         {
+            var latestPrice = await _alpacaService.GetLatestPriceAsync(signal.Symbol, signal.BrokerAccountId);
             await _signalLogService.LogSignalAsync(
                 signal.UserId,
                 signal.BrokerAccountId,
                 action,
                 signal.Symbol,
                 signal.Quantity,
-                signal.Price,
+                latestPrice,
                 logTitle,
                 logMessage
             );
@@ -262,7 +298,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
             var telegramUser = await _telegramBotService.GetUserByIdOrPhoneNumberAsync(signal.UserId, null);
             if (telegramUser?.ChatId != null)
             {
-                var message = $"TransactionId: {transactionId}\n{logTitle}:\n\nHisse: {signal.Symbol}\nİşlem: {action}\nMiktar: {signal.Quantity}\nFiyat: {signal.Price}";
+                var message = $"TransactionId: {transactionId}\n{logTitle}:\n\nHisse: {signal.Symbol}\nİşlem: {action}\nMiktar: {signal.Quantity}\nFiyat: {latestPrice}";
                 await _telegramBotService.SendMessageAsync(telegramUser.ChatId, message);
             }
         }

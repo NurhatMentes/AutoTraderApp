@@ -1,6 +1,7 @@
 ﻿using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
+using AutoTraderApp.Infrastructure.Services.Alpaca;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,22 +14,52 @@ namespace AutoTraderApp.WebAPI.Controllers
     {
         private readonly IAlphaVantageService _marketDataService;
         private readonly IMediator _mediator;
+        private readonly IAlpacaService _alpacaService;
+        private readonly IPolygonService _polygonService;
 
 
-        public MarketDataController(IAlphaVantageService marketDataService, IMediator mediator)
+        public MarketDataController(IAlphaVantageService marketDataService, IMediator mediator, IAlpacaService alpacaService, IPolygonService polygonService)
         {
             _marketDataService = marketDataService;
             _mediator = mediator;
+            _alpacaService = alpacaService;
+            _polygonService = polygonService;
+        }
+
+        [HttpGet("polygon/stock/{symbol}")]
+        public async Task<IActionResult> PolygonGetStock(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return BadRequest("Geçerli bir sembol belirtiniz.");
+            }
+
+            var result = await _polygonService.GetStockPriceAsync(symbol);
+            return Ok(result);
+        }
+
+        [HttpGet("alpaca-latest-price")]
+        public async Task<IActionResult> AlpacaGetLatestPrice([FromQuery] string symbol, [FromQuery] Guid brokerAccountId)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return BadRequest("Geçerli bir sembol belirtiniz.");
+            }
+
+            var latestPrice = await _alpacaService.GetLatestPriceAsync(symbol.ToUpperInvariant(), brokerAccountId);
+            return Ok(latestPrice);
+
+
         }
 
         [HttpGet("alphaVantage/price/{symbol}")]
         public async Task<IActionResult> AlphaVantageGetCurrentPrice(string symbol)
         {
             var price = await _marketDataService.GetCurrentPrice(symbol);
-            if (!price.HasValue)
+            if (price == null)
                 return NotFound($"Sembol için fiyat bulunamadı: {symbol}");
 
-            return Ok(new SuccessDataResult<decimal>(price.Value, $"Şu anki fiyat {symbol}"));
+            return Ok(new SuccessResult($"Şu anki fiyat {price}"));
         }
 
         [HttpGet("alphaVantage/historical/{symbol}")]

@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace AutoTraderApp.Infrastructure.Services.Automation
+namespace AutoTraderApp.Infrastructure.Services.Automation.Playwrights
 {
     public class TradingViewAutomationService : ITradingViewAutomationService
     {
@@ -68,7 +68,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 if (await _page.IsVisibleAsync("div#rc-anchor-container"))
                 {
                     Console.WriteLine("Captcha detected. Please solve it manually.");
-                    await Task.Delay(TimeSpan.FromMinutes(3));
+                    await Task.Delay(TimeSpan.FromMinutes(2));
                     if (await _page.IsVisibleAsync("div#rc-anchor-container"))
                     {
                         Console.WriteLine("Captcha not solved within the time limit.");
@@ -111,6 +111,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
             }
         }
 
+      
         public async Task<bool> CreateStrategyAsync(string strategyName, string symbol, string script, string webhookUrl, Guid userId)
         {
             int randomTime = new Random().Next(4, 10);
@@ -278,17 +279,16 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
         }
 
 
-        public async Task<bool> CreateAlertAsync(string strategyName, string webhookUrl, string action, string symbol, int quantity, decimal price, Guid brokerAccountId, Guid userId)
+        public async Task<bool> CreateAlertAsync(string strategyName, string webhookUrl, string action, string symbol, int quantity, Guid brokerAccountId, Guid userId)
         {
             Console.WriteLine($"Sembol için grafik sayfasına yönlendirme: {symbol}");
-            await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
-
-            await Task.Delay(TimeSpan.FromSeconds(6));
-            int randomTime = new Random().Next(4, 10);
+            await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");         
 
             try
             {
-                Console.WriteLine("Alert butonu aranıyor...");
+                int randomTime = new Random().Next(2, 8);
+                await Task.Delay(TimeSpan.FromSeconds(randomTime));
+                Console.WriteLine($"{symbol} sembolü için alert butonu aranıyor...");
 
                 // Add Alert butonuna tıkla
                 var allButtons = await _page.QuerySelectorAllAsync("button");
@@ -303,7 +303,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     }
                 }
 
-                    await Task.Delay(TimeSpan.FromSeconds(2));
+                    await Task.Delay(TimeSpan.FromSeconds(3));
 
                     //// **Condition Alanını Güncelleme**
                     //Console.WriteLine("Condition alanı ayarlanıyor...");
@@ -361,7 +361,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                     await _page.EvaluateAsync($"() => document.querySelector('button[aria-controls=\"alert-editor-expiration-popup\"] .content-H6_2ZGVv').innerText = '{expirationDate}'");
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(3));
+                await Task.Delay(TimeSpan.FromSeconds(4));
 
                 // Mesaj alanını doldur
                 var messageBox = await _page.QuerySelectorAsync("#alert-message");
@@ -372,7 +372,6 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
   ""action"": ""{action}"",
   ""symbol"": ""{symbol}"",
   ""quantity"": {quantity},
-  ""price"": {price.ToString(CultureInfo.InvariantCulture)},
   ""brokerAccountId"": ""{brokerAccountId}"",
   ""userId"": ""{userId}""
 }}";
@@ -380,16 +379,18 @@ namespace AutoTraderApp.Infrastructure.Services.Automation
                 await messageBox.FillAsync(message);
 
                 // Notifications Tab
+                await Task.Delay(TimeSpan.FromSeconds(1));
                 await _page.ClickAsync("#alert-dialog-tabs__notifications");
-                await Task.Delay(1000);
 
                 // Webhook URL
+                await Task.Delay(TimeSpan.FromSeconds(2));
                 var webhookBox = await _page.QuerySelectorAsync("#webhook-url");
                 if (webhookBox == null)
                     throw new Exception("Webhook URL alanı bulunamadı.");
                 await webhookBox.FillAsync(webhookUrl);
 
                 // Create
+                await Task.Delay(TimeSpan.FromSeconds(2));
                 var createButton = await _page.QuerySelectorAsync("button[data-name='submit']");
                 if (createButton == null)
                     throw new Exception("Create butonu bulunamadı.");

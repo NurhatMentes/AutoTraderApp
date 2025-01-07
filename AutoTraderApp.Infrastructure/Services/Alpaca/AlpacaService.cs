@@ -4,6 +4,7 @@ using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
+using OpenQA.Selenium.BiDi.Modules.Network;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
@@ -18,7 +19,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
-        private readonly IAlpacaApiLogService _alpacaApiLogService;
         private readonly IBaseRepository<BrokerLog> _brokerLog;
 
         private readonly ConcurrentDictionary<Guid, HttpClient> _httpClientCache = new();
@@ -26,13 +26,10 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
         public AlpacaService(
             IHttpClientFactory httpClientFactory,
             IBaseRepository<BrokerAccount> brokerAccountRepository,
-            IAlpacaApiLogService alpacaApiLogService,
             IBaseRepository<BrokerLog> brokerLog)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-            _brokerAccountRepository = brokerAccountRepository ?? throw new ArgumentNullException(nameof(brokerAccountRepository));
-            _alpacaApiLogService = alpacaApiLogService;
-            _brokerLog = brokerLog;
+            _brokerLog = brokerLog; _brokerAccountRepository = brokerAccountRepository ?? throw new ArgumentNullException(nameof(brokerAccountRepository));
         }
 
         private async Task<HttpClient> ConfigureHttpClientAsync(Guid brokerAccountId)
@@ -59,6 +56,41 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
         }
 
 
+        private async Task<HttpClient> ConfigureDataApiHttpClientAsync(Guid brokerAccountId)
+        {
+
+            var brokerAccount = await _brokerAccountRepository.GetAsync(b => b.Id == brokerAccountId);
+            if (brokerAccount == null)
+            {
+                throw new Exception("Broker hesabı bulunamadı.");
+            }
+
+            var dataApiUrl = "https://data.alpaca.markets";
+            var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(dataApiUrl);
+            client.DefaultRequestHeaders.Clear();
+            client.DefaultRequestHeaders.Add("APCA-API-KEY-ID", brokerAccount.ApiKey);
+            client.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", brokerAccount.ApiSecret);
+
+            _httpClientCache.TryAdd(brokerAccountId, client);
+            return client;
+        }
+
+
+
+        public bool AlpacaLog(Guid brokerAccountId,string msg)
+        {
+            _brokerLog.AddAsync(new BrokerLog
+            {
+                BrokerAccountId = brokerAccountId,
+                Message = msg
+            });
+
+            return true;
+        }
+
+
+
         public async Task<AccountInfo> GetAccountInfoAsync(Guid brokerAccountId)
         {
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
@@ -83,18 +115,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 {
                     throw new Exception("Hesap bilgileri boş geldi.");
                 }
-
-                // Log işlemi
-                await _alpacaApiLogService.LogAsync(new AlpacaApiLog
-                {
-                    BrokerAccountId = brokerAccountId,
-                    RequestUrl = "v2/account",
-                    HttpMethod = "GET",
-                    ResponseBody = responseContent,
-                    ResponseStatusCode = (int)response.StatusCode,
-                    CreatedAt = DateTime.UtcNow,
-                    LogType = response.IsSuccessStatusCode ? "Info" : "Error"
-                });
 
                 return accountInfo;
             }
@@ -134,17 +154,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
                 });
 
-                await _alpacaApiLogService.LogAsync(new AlpacaApiLog
-                {
-                    BrokerAccountId = brokerAccountId,
-                    RequestUrl = "v2/orders",
-                    HttpMethod = "POST",
-                    RequestBody = JsonSerializer.Serialize(orderRequest),
-                    ResponseBody = responseContent,
-                    ResponseStatusCode = (int)response.StatusCode,
-                    CreatedAt = DateTime.UtcNow,
-                    LogType = response.IsSuccessStatusCode ? "Info" : "Error"
-                });
 
                 return orderResponse;
             }
@@ -456,6 +465,50 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 throw new Exception($"Varlık bilgisi alınamadı: {response.StatusCode} - {errorContent}");
             }
             return await response.Content.ReadFromJsonAsync<AssetDetails>();
+        }
+        public async Task<decimal> GetLatestPriceAsync(string symbol, Guid brokerAccountId)
+        {
+            var httpClient = await ConfigureDataApiHttpClientAsync(brokerAccountId);
+
+            // Quotes endpoint'ini kullan
+            var url = $"/v2/stocks/{symbol}/trades/latest";
+            var response = await httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Fiyat verisi alınamadı: {response.StatusCode} - {errorContent}");
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+
+            var tradeResponse = JsonSerializer.Deserialize<TradeResponse>(responseContent, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (tradeResponse?.Trade == null)
+            {
+                throw new Exception($"No trade data available for {symbol}");
+            }
+
+            return tradeResponse.Trade.Price;
+        }
+    
+
+        public async Task<bool> IsSymbolValidAsync(string symbol, Guid brokerAccountId)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var response = await httpClient.GetAsync($"/v2/assets/{symbol}");
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                Console.WriteLine($"Symbol bulunamadı: {symbol}");
+                return false;
+            }
+
+            return response.IsSuccessStatusCode;
         }
 
     }

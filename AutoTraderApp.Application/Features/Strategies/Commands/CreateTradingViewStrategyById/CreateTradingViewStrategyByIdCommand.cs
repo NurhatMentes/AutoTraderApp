@@ -102,7 +102,6 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
                 "buy",
                 strategy.Symbol,
                 quantity,
-                strategy.EntryPrice ,
                 request.BrokerAccountId,
                 request.UserId
             );

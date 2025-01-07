@@ -13,11 +13,13 @@ namespace AutoTraderApp.WebAPI.Controllers
     {
         private readonly IMediator _mediator;
         private readonly ITradingViewAutomationService _tradingViewAutomationService;
+        private readonly ITradingViewSeleniumService _tradingViewSeleniumService;
 
-        public UserTradingAccountsController(IMediator mediator, ITradingViewAutomationService tradingViewAutomationService)
+        public UserTradingAccountsController(IMediator mediator, ITradingViewAutomationService tradingViewAutomationService, ITradingViewSeleniumService tradingViewSeleniumService)
         {
             _mediator = mediator;
             _tradingViewAutomationService = tradingViewAutomationService;
+            _tradingViewSeleniumService = tradingViewSeleniumService;
         }
 
         [HttpPost("CreateTradingAccount")]
@@ -30,8 +32,8 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(result);
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> LoginToTradingView([FromBody] TradingViewLoginDto loginDto)
+        [HttpPost("playwright-login")]
+        public async Task<IActionResult> LoginFromPlaywrightToTradingView([FromBody] TradingViewLoginDto loginDto)
         {
             var result = await _tradingViewAutomationService.LoginAsync(loginDto.UserId, loginDto.Password);
             if (result)
@@ -42,5 +44,16 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(new { Message = "TradingView'e giriş başarısız." });
         }
 
+        [HttpPost("selenium-login-sync")]
+        public async Task<IActionResult> LoginFromSeleniumToTradingView([FromBody] TradingViewLoginDto loginDto)
+        {
+            var result =  _tradingViewSeleniumService.Login(loginDto.UserId, loginDto.Password);
+            if (result)
+            {
+                return Ok(new { Message = "TradingView'e giriş başarılı." });
+            }
+
+            return BadRequest(new { Message = "TradingView'e giriş başarısız." });
+        }
     }
 }

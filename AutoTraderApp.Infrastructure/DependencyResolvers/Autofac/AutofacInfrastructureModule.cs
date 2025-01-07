@@ -4,11 +4,9 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Core.Utilities.Settings;
 using AutoTraderApp.Domain.Entities;
-using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
-using AutoTraderApp.Domain.ExternalModels.Polygon;
 using AutoTraderApp.Infrastructure.Interfaces;
 using AutoTraderApp.Infrastructure.Services.Alpaca;
-using AutoTraderApp.Infrastructure.Services.Automation;
+using AutoTraderApp.Infrastructure.Services.Automation.Playwrights;
 using AutoTraderApp.Infrastructure.Services.MarketData;
 using AutoTraderApp.Infrastructure.Services.Polygon;
 using AutoTraderApp.Infrastructure.Services.Telegram;
@@ -62,9 +60,8 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             {
                 var httpClientFactory = ctx.Resolve<IHttpClientFactory>();
                 var brokerAccountRepository = ctx.Resolve<IBaseRepository<BrokerAccount>>();
-                var alpacaApiLogService = ctx.Resolve<IAlpacaApiLogService>();
                 var brokerLog = ctx.Resolve<IBaseRepository<BrokerLog>>();
-                return new AlpacaService(httpClientFactory, brokerAccountRepository, alpacaApiLogService, brokerLog);
+                return new AlpacaService(httpClientFactory, brokerAccountRepository, brokerLog);
             }).As<IAlpacaService>().InstancePerLifetimeScope();
 
 
@@ -87,7 +84,6 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
                    .As<ITradingViewAutomationService>()
                    .InstancePerLifetimeScope();
 
-
             // TradingView Log Service
             builder.RegisterType<TradingViewLogService>()
                    .AsSelf()
@@ -103,16 +99,15 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
                 .As<ITelegramBotService>()
                 .InstancePerLifetimeScope();
 
-            // AlpacaApiLogService register
-            builder.RegisterType<AlpacaApiLogService>()
-                   .As<IAlpacaApiLogService>()
-                   .InstancePerLifetimeScope();
-
             // Polygon
             builder.RegisterType<PolygonService>()
                    .As<IPolygonService>()
                    .InstancePerLifetimeScope();
 
+            // Selenium
+            builder.RegisterType<TradingViewSelenium>()
+      .As<ITradingViewSeleniumService>()
+      .InstancePerLifetimeScope();
         }
     }
 }

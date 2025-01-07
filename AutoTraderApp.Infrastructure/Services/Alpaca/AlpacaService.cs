@@ -4,6 +4,7 @@ using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
+using OpenQA.Selenium.BiDi.Modules.Network;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
@@ -18,7 +19,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
-        private readonly IAlpacaApiLogService _alpacaApiLogService;
         private readonly IBaseRepository<BrokerLog> _brokerLog;
 
         private readonly ConcurrentDictionary<Guid, HttpClient> _httpClientCache = new();
@@ -26,13 +26,10 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
         public AlpacaService(
             IHttpClientFactory httpClientFactory,
             IBaseRepository<BrokerAccount> brokerAccountRepository,
-            IAlpacaApiLogService alpacaApiLogService,
             IBaseRepository<BrokerLog> brokerLog)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-            _brokerAccountRepository = brokerAccountRepository ?? throw new ArgumentNullException(nameof(brokerAccountRepository));
-            _alpacaApiLogService = alpacaApiLogService;
-            _brokerLog = brokerLog;
+            _brokerLog = brokerLog; _brokerAccountRepository = brokerAccountRepository ?? throw new ArgumentNullException(nameof(brokerAccountRepository));
         }
 
         private async Task<HttpClient> ConfigureHttpClientAsync(Guid brokerAccountId)
@@ -80,6 +77,20 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
         }
 
 
+
+        public bool AlpacaLog(Guid brokerAccountId,string msg)
+        {
+            _brokerLog.AddAsync(new BrokerLog
+            {
+                BrokerAccountId = brokerAccountId,
+                Message = msg
+            });
+
+            return true;
+        }
+
+
+
         public async Task<AccountInfo> GetAccountInfoAsync(Guid brokerAccountId)
         {
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
@@ -104,18 +115,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 {
                     throw new Exception("Hesap bilgileri boş geldi.");
                 }
-
-                // Log işlemi
-                await _alpacaApiLogService.LogAsync(new AlpacaApiLog
-                {
-                    BrokerAccountId = brokerAccountId,
-                    RequestUrl = "v2/account",
-                    HttpMethod = "GET",
-                    ResponseBody = responseContent,
-                    ResponseStatusCode = (int)response.StatusCode,
-                    CreatedAt = DateTime.UtcNow,
-                    LogType = response.IsSuccessStatusCode ? "Info" : "Error"
-                });
 
                 return accountInfo;
             }
@@ -153,19 +152,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                     BrokerAccountId = brokerAccountId,
                     Message = $"Yeni emir oluşturuldu: {orderResponse.Symbol} - {orderResponse.Quantity} adet",
 
-                });
-
-                await _alpacaApiLogService.LogAsync(new AlpacaApiLog
-                {
-                    BrokerAccountId = brokerAccountId,
-                    RequestUrl = "v2/orders",
-                    HttpMethod = "POST",
-                    RequestBody = JsonSerializer.Serialize(orderRequest),
-                    ResponseBody = responseContent,
-                    ResponseStatusCode = (int)response.StatusCode,
-                    CreatedAt = DateTime.UtcNow,
-                    LogType = response.IsSuccessStatusCode ? "Info" : "Error",
-                    ErrorMessage = !response.IsSuccessStatusCode ? $"Hata: {responseContent}" : null
                 });
 
 

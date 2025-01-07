@@ -176,7 +176,7 @@ public class AlphaVantageService : IAlphaVantageService
                         ChangePercentage = gainer.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(gainer.GetProperty("volume").GetString())
                     })
-                    .Take(15)
+                    .Take(10)
                     .ToList();
 
                 return gainers;
@@ -214,7 +214,7 @@ public class AlphaVantageService : IAlphaVantageService
                         ChangePercentage = loser.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(loser.GetProperty("volume").GetString())
                     })
-                    .Take(15)
+                    .Take(10)
                     .ToList();
 
                 return losers;
@@ -252,7 +252,7 @@ public class AlphaVantageService : IAlphaVantageService
                         ChangePercentage = activeStock.GetProperty("change_percentage").GetString(),
                         Volume = long.Parse(activeStock.GetProperty("volume").GetString())
                     })
-                    .Take(15)
+                    .Take(10)
                     .ToList();
 
                 return activeStocks;

@@ -4,6 +4,7 @@ using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
+using Microsoft.Playwright;
 using OpenQA.Selenium.BiDi.Modules.Network;
 using System.Collections.Concurrent;
 using System.Net;
@@ -11,6 +12,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Position = AutoTraderApp.Domain.Entities.Position;
 
 
 namespace AutoTraderApp.Infrastructure.Services.Alpaca
@@ -78,7 +80,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
 
 
-        public bool AlpacaLog(Guid brokerAccountId,string msg)
+        public bool AlpacaLog(Guid brokerAccountId, string msg)
         {
             _brokerLog.AddAsync(new BrokerLog
             {
@@ -147,7 +149,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 }
 
                 // Log işlemi
-                await   _brokerLog.AddAsync(new BrokerLog
+                await _brokerLog.AddAsync(new BrokerLog
                 {
                     BrokerAccountId = brokerAccountId,
                     Message = $"Yeni emir oluşturuldu: {orderResponse.Symbol} - {orderResponse.Quantity} adet",
@@ -314,6 +316,32 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             }
         }
 
+        public async Task<IResult> CloseAllPositionAsync(Guid brokerAccountId)
+        {
+            Console.WriteLine($"Butuün açık pozisyonlar kapatma işlemi başlıyor. BrokerAccountId: {brokerAccountId}");
+
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            try
+            {
+                var response = await httpClient.DeleteAsync($"/v2/positions?cancel_orders=true");
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
+                    return new ErrorResult($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
+                }
+
+                Console.WriteLine("Pozisyon başarıyla kapatıldı");
+                return new SuccessResult("Bütün açık pozisyon başarıyla kapatıldı.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Pozisyonları kapatma sırasında hata oluştu: {ex.Message}");
+                return new ErrorResult($"Pozisyonları kapatma sırasında hata oluştu: {ex.Message}");
+            }
+        }
 
         public async Task<PositionResponse> GetPositionBySymbolAsync(string symbol, Guid brokerAccountId)
         {
@@ -445,8 +473,16 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                     return new ErrorResult($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
                 }
 
+                var closePositions = await CloseAllPositionAsync(brokerAccountId);
                 Console.WriteLine("Tüm pozisyonlar başarıyla kapatıldı.");
+
+                if (closePositions.Success!)
+                {
+                    Console.WriteLine($"Pozisyonlar kapatılırken hata oluştu. Hata: {closePositions.Message}");
+                    return new ErrorResult("Tüm pozisyonları kapatma sırasında hata.");
+                }
                 return new SuccessResult("Tüm pozisyonlar başarıyla kapatıldı.");
+
             }
             catch (Exception ex)
             {
@@ -466,11 +502,11 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             }
             return await response.Content.ReadFromJsonAsync<AssetDetails>();
         }
+
         public async Task<decimal> GetLatestPriceAsync(string symbol, Guid brokerAccountId)
         {
             var httpClient = await ConfigureDataApiHttpClientAsync(brokerAccountId);
 
-            // Quotes endpoint'ini kullan
             var url = $"/v2/stocks/{symbol}/trades/latest";
             var response = await httpClient.GetAsync(url);
 
@@ -495,7 +531,18 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
             return tradeResponse.Trade.Price;
         }
-    
+
+        public async Task<AssetDetails> GetMoversAsync(string symbol, Guid brokerAccountId)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var response = await httpClient.GetAsync($"/v2/assets/{symbol}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Varlık bilgisi alınamadı: {response.StatusCode} - {errorContent}");
+            }
+            return await response.Content.ReadFromJsonAsync<AssetDetails>();
+        }
 
         public async Task<bool> IsSymbolValidAsync(string symbol, Guid brokerAccountId)
         {

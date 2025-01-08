@@ -18,7 +18,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         public Guid UserId { get; set; }
     }
 
-    public class ApplyStrategyToMultipleStocksCommandHandler : IRequestHandler<ApplyStrategyToMultipleStocksSyncCommand, IResult>
+    public class ApplyStrategyToMultipleStocksSyncCommandHandler : IRequestHandler<ApplyStrategyToMultipleStocksSyncCommand, IResult>
     {
         private readonly IBaseRepository<Strategy> _strategyRepository;
         private readonly ITradingViewAutomationService _automationService;
@@ -30,7 +30,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         private readonly IMediator _mediator;
         private readonly ITradingViewSeleniumService _tradingViewSeleniumService;
 
-        public ApplyStrategyToMultipleStocksCommandHandler(
+        public ApplyStrategyToMultipleStocksSyncCommandHandler(
             IBaseRepository<Strategy> strategyRepository,
             ITradingViewAutomationService automationService,
             IBaseRepository<BrokerAccount> brokerAccountRepository,
@@ -74,11 +74,11 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                 return new ErrorResult("TradingView alarmları temizlenemedi.");
 
             // UpdateCombinedStockListCommand çalıştırılıyor
-            var updateResult = _mediator.Send(new UpdateCombinedStockListCommand()).Result;
-            if (!updateResult)
-            {
-                return new ErrorResult($"Birleşik hisse güncellenemedi");
-            }
+            //var updateResult = _mediator.Send(new UpdateCombinedStockListCommand()).Result;
+            //if (!updateResult)
+            //{
+            //    return new ErrorResult($"Birleşik hisse güncellenemedi");
+            //}
 
             var combinedStocks = _combinedStockRepository.GetAllAsync().Result;
             if (combinedStocks == null || !combinedStocks.Any())

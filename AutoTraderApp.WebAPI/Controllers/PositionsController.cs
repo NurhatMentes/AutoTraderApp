@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Application.Features.Position.Commands.ClosePosition;
 using AutoTraderApp.Application.Features.Position.Queries;
+using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,13 +12,15 @@ namespace AutoTraderApp.WebAPI.Controllers
     public class PositionsController : BaseController
     {
         private readonly IMediator _mediator;
+        private readonly IAlpacaService _alpacaService;
 
-        public PositionsController(IMediator mediator)
+        public PositionsController(IMediator mediator, IAlpacaService alpacaService)
         {
             _mediator = mediator;
+            _alpacaService = alpacaService;
         }
 
-        [HttpGet("alpaca/get_positions/{brokerAccountId}")]
+        [HttpGet("alpaca/get-positions/{brokerAccountId}")]
         public async Task<IActionResult> GetPositions(Guid brokerAccountId)
         {
             var result = await _mediator.Send(new GetPositionsQuery { BrokerAccountId = brokerAccountId });
@@ -26,14 +29,14 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(result);
         }
 
-        [HttpGet("alpaca/get_open_positions/{brokerAccountId}")]
+        [HttpGet("alpaca/get-open-positions/{brokerAccountId}")]
         public async Task<IActionResult> GetOpenPositions(Guid brokerAccountId)
         {
             var result = await _mediator.Send(new GetPositionsQuery { BrokerAccountId = brokerAccountId });
             return Ok(result);
         }
 
-        [HttpPost("alpaca/close_position")]
+        [HttpPost("alpaca/close-position")]
         public async Task<IActionResult> ClosePosition([FromBody] ClosePositionCommand request)
         {
             var result = await _mediator.Send(request);
@@ -42,5 +45,13 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(result);
         }
 
+        [HttpPost("alpaca/all-close-position")]
+        public async Task<IActionResult> AllClosePosition(Guid brokerAccountId)
+        {
+            var result = await _alpacaService.CloseAllPositionAsync(brokerAccountId);
+            if (result.Success)
+                return Ok(result);
+            return BadRequest(result);
+        }
     }
 }

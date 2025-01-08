@@ -111,7 +111,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                     _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Çakışan emir iptal edildi: {conflictingOrder.Symbol} - {conflictingOrder.OrderClass}");
                     Console.WriteLine($"Çakışan emir iptal edildi: {conflictingOrder.Symbol} - {conflictingOrder.OrderClass}");
                     await _alpacaService.CancelOrderAsync(conflictingOrder.OrderId, signal.BrokerAccountId);
-                }   
+                }
 
                 // Varlığın kısa satışa uygunluğunu kontrol et
                 var assetDetails = await _alpacaService.GetAssetDetailsAsync(signal.Symbol, signal.BrokerAccountId);
@@ -152,7 +152,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
                 Console.WriteLine(signal.Action + "Sinyali Alındı: " + signal.Symbol);
 
-             
+
 
                 // Retry mekanizması ile işlem yap
                 await ExecuteWithRetry(async () =>
@@ -164,7 +164,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                     var minIncrement = basePrice < 1.00M ? 0.01M : (basePrice < 100.00M ? 0.01M : 0.1M);
 
                     // Stop Loss ve Take Profit hesaplama
-                    var calculatedStopPrice = basePrice - (basePrice * 6/100);
+                    var calculatedStopPrice = basePrice - (basePrice * 6 / 100);
                     var calculatedTakeProfitPrice = basePrice * (basePrice * 50 / 100);
 
                     // Alpaca'nın artış kriterlerine uygun hale getirme
@@ -185,39 +185,48 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
                     if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
                     {
-                        var orderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
+                        var currentTime = nowTurkeyTime.TimeOfDay;
+                        if (currentTime >= new TimeSpan(22, 45, 0) && currentTime <= new TimeSpan(23, 30, 0))
                         {
-                            Symbol = signal.Symbol,
-                            Qty = signal.Quantity,
-                            Side = "buy",
-                            Type = "market",
-                            TimeInForce = "gtc",
-                            OrderClass = "bracket",
-                            StopLoss = new StopLoss
+                            Console.WriteLine("Tüm hisseler satışa çıkarıldığı için alım işlemleri kapatılmıştr.");
+                            return new ErrorResult("Tüm hisseler satışa çıkarıldığı için alım işlemleri kapatılmıştr.");
+                        }
+                        else
+                        {
+                            var orderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
                             {
-                                StopPrice = calculatedStopPrice
-                            },
-                            TakeProfit = new TakeProfit
+                                Symbol = signal.Symbol,
+                                Qty = signal.Quantity,
+                                Side = "buy",
+                                Type = "market",
+                                TimeInForce = "gtc",
+                                OrderClass = "bracket",
+                                StopLoss = new StopLoss
+                                {
+                                    StopPrice = calculatedStopPrice
+                                },
+                                TakeProfit = new TakeProfit
+                                {
+                                    LimitPrice = calculatedTakeProfitPrice
+                                }
+                            });
+
+                            _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Yeni emir oluşturuldu: {signal.Action} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
+                            await _brokerLog.AddAsync(new BrokerLog
                             {
-                                LimitPrice = calculatedTakeProfitPrice
+                                BrokerAccountId = signal.BrokerAccountId,
+                                Message = $"Yeni emir oluşturuldu: {signal.Action} işlemi başarıyla gerçekleştirildi. {signal.Symbol}",
+
+                            });
+
+                            if (IsOrderSuccessful(orderRequest.Status))
+                            {
+                                string actionType = signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) ? "BUY" : "SELL";
+                                await NotifyAndLog(signal, transactionId, $"{actionType} işlemi başarılı", $"Hisse {actionType} yapıldı: {signal.Symbol}, Miktar: {signal.Quantity}", actionType);
+                                Console.WriteLine($"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
+                                _alpacaService.AlpacaLog(signal.BrokerAccountId, $"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
+                                return new SuccessResult($"{actionType} işlemi başarıyla gerçekleştirildi.");
                             }
-                        });
-
-                        _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Yeni emir oluşturuldu: {signal.Action} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
-                        await _brokerLog.AddAsync(new BrokerLog
-                        {
-                            BrokerAccountId = signal.BrokerAccountId,
-                            Message = $"Yeni emir oluşturuldu: {signal.Action} işlemi başarıyla gerçekleştirildi. {signal.Symbol}",
-
-                        });
-
-                        if (IsOrderSuccessful(orderRequest.Status))
-                        {
-                            string actionType = signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) ? "BUY" : "SELL";
-                            await NotifyAndLog(signal, transactionId, $"{actionType} işlemi başarılı", $"Hisse {actionType} yapıldı: {signal.Symbol}, Miktar: {signal.Quantity}", actionType);
-                            Console.WriteLine($"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
-                            _alpacaService.AlpacaLog(signal.BrokerAccountId, $"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
-                            return new SuccessResult($"{actionType} işlemi başarıyla gerçekleştirildi.");
                         }
                     }
 
@@ -267,11 +276,11 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
             }
             catch (Exception ex)
             {
-                _alpacaService.AlpacaLog(signal.BrokerAccountId, $"XXXX Yeni emir oluşturulamadı: {signal.Action} -- {signal.Symbol} :: HATA: {ex.Message}");
+                _alpacaService.AlpacaLog(signal.BrokerAccountId, $"XXXX Yeni emir oluşturulamadı: {signal.Action} ({signal.Quantity} adet) -- {signal.Symbol} :: HATA: {ex.Message}");
                 await _brokerLog.AddAsync(new BrokerLog
                 {
                     BrokerAccountId = signal.BrokerAccountId,
-                    Message = $"XXXX Yeni emir oluşturulamadı: {signal.Action} -- {signal.Symbol} :: HATA: {ex.Message}",
+                    Message = $"XXXX Yeni emir oluşturulamadı: {signal.Action} ({signal.Quantity} adet) -- {signal.Symbol} :: HATA: {ex.Message}",
 
                 });
                 Console.WriteLine($"TransactionId: {transactionId} - Hata: {ex.Message}");

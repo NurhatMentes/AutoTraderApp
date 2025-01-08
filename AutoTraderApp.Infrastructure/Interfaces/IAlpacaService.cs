@@ -22,5 +22,6 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         Task<OrderResponse[]> GetAllOrdersAsync(Guid brokerAccountId);
         Task<decimal> GetLatestPriceAsync(string symbol, Guid brokerAccountId);
         public bool AlpacaLog(Guid brokerAccountId, string msg);
+        Task<IResult> CloseAllPositionAsync(Guid brokerAccountId);
     }
 }

@@ -34,7 +34,7 @@ namespace AutoTraderApp.Application.Features.CombinedStocks.Commands
             {
                 Symbol = x.Ticker,
                 Category = "TopGainers",
-                Price = x.Price,
+                Price = decimal.Parse(x.Price),
                 ChangePercentage = ParseChangePercentage(x.ChangePercentage),
                 Volume = x.Volume,
                 UpdatedAt = DateTime.UtcNow
@@ -44,7 +44,7 @@ namespace AutoTraderApp.Application.Features.CombinedStocks.Commands
             {
                 Symbol = x.Ticker,
                 Category = "TopLosers",
-                Price = x.Price,
+                Price = decimal.Parse(x.Price),
                 ChangePercentage = ParseChangePercentage(x.ChangePercentage),
                 Volume = x.Volume,
                 UpdatedAt = DateTime.UtcNow
@@ -54,7 +54,7 @@ namespace AutoTraderApp.Application.Features.CombinedStocks.Commands
             {
                 Symbol = x.Ticker,
                 Category = "MostActive",
-                Price = x.Price,
+                Price = decimal.Parse(x.Price),
                 ChangePercentage = ParseChangePercentage(x.ChangePercentage),
                 Volume = x.Volume,
                 UpdatedAt = DateTime.UtcNow

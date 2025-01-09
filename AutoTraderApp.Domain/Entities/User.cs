@@ -9,6 +9,7 @@ namespace AutoTraderApp.Domain.Entities
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string UserName { get; set; }
+        public string? PhoneNumber { get; set; }
         public Email Email { get; set; } = null!;
         public byte[] PasswordHash { get; set; } = null!;
         public byte[] PasswordSalt { get; set; } = null!;

@@ -11,66 +11,32 @@ namespace AutoTraderApp.Application.Features.Position.Commands.ClosePosition
     {
         public Guid BrokerAccountId { get; set; }
         public string Symbol { get; set; }
-        public decimal Quantity { get; set; }
+        public decimal? Quantity { get; set; }
     }
 
     public class ClosePositionCommandHandler : IRequestHandler<ClosePositionCommand, IResult>
     {
-        private readonly IBaseRepository<Domain.Entities.Position> _positionRepository;
-        private readonly IBaseRepository<ClosedPosition> _closedPositionRepository;
         private readonly IAlpacaService _alpacaService;
 
-        public ClosePositionCommandHandler(
-            IBaseRepository<Domain.Entities.Position> positionRepository,
-            IBaseRepository<ClosedPosition> closedPositionRepository,
-            IAlpacaService alpacaService)
+        public ClosePositionCommandHandler(IAlpacaService alpacaService)
         {
-            _positionRepository = positionRepository;
-            _closedPositionRepository = closedPositionRepository;
-            _alpacaService = alpacaService;
+            _alpacaService = alpacaService ?? throw new ArgumentNullException(nameof(alpacaService));
         }
 
         public async Task<IResult> Handle(ClosePositionCommand request, CancellationToken cancellationToken)
         {
-            var positionCheck = await _alpacaService.GetPositionsAsync(request.BrokerAccountId);
-            var position = await _positionRepository.GetAsync(p => p.Symbol == request.Symbol && p.IsOpen);
+            Console.WriteLine($"Pozisyon kapatma işlemi başlıyor. Symbol: {request.Symbol}, BrokerAccountId: {request.BrokerAccountId}");
 
-            if (position == null)
-                return new ErrorResult("Pozisyon bulunamadı veya zaten kapalı.");
+            var closeResult = await _alpacaService.ClosePositionAsync(request.Symbol, request.Quantity, request.BrokerAccountId);
 
-            if (request.Quantity > position.Quantity)
-                return new ErrorResult("Kapatılacak miktar pozisyon miktarından büyük olamaz.");
+            if (!closeResult.Success)
+                return new ErrorResult($"Pozisyon kapatma sırasında hata: {closeResult.Message}");
 
-            var alpacaResult = await _alpacaService.ClosePositionAsync(request.Symbol, request.Quantity,request.BrokerAccountId);
-
-            if (!alpacaResult.Success)
-                return new ErrorResult($"Alpaca API hatası: {alpacaResult.Message}");
-
-            var realizedPnL = (position.CurrentPrice - position.EntryPrice) * request.Quantity;
-
-            var closedPosition = new ClosedPosition
-            {
-                Symbol = position.Symbol,
-                Quantity = request.Quantity,
-                RealizedPnL = realizedPnL,
-                ClosedAt = DateTime.UtcNow
-            };
-
-            if (request.Quantity == position.Quantity)
-            {
-                position.IsOpen = false;
-                position.Quantity = 0;
-            }
-            else
-            {
-                position.Quantity -= request.Quantity;
-            }
-
-            await _closedPositionRepository.AddAsync(closedPosition);
-            await _positionRepository.UpdateAsync(position);
-
-            return new SuccessResult("Pozisyon başarıyla kapatıldı.");
+            Console.WriteLine($"Pozisyon başarıyla kapatıldı: {request.Symbol}");
+            return new SuccessResult($"Pozisyon başarıyla kapatıldı: {request.Symbol}");
         }
+
+
     }
 
 }

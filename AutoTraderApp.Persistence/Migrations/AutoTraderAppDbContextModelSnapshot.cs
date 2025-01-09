@@ -22,6 +22,36 @@ namespace AutoTraderApp.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.AlpacaApiLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BrokerAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AlpacaApiLogs");
+                });
+
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -74,6 +104,35 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("BrokerAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BrokerAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BrokerLogs");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.ClosedPosition", b =>
@@ -376,17 +435,53 @@ namespace AutoTraderApp.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("AdxSmoothing")
+                        .HasColumnType("int");
+
+                    b.Property<float>("AdxThreshold")
+                        .HasColumnType("real");
+
+                    b.Property<int>("AtrLength")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BollingerLength")
+                        .HasColumnType("int");
+
+                    b.Property<float>("BollingerMultiplier")
+                        .HasColumnType("real");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("DmiLength")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("EntryPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<int>("RsiLength")
+                        .HasColumnType("int");
+
+                    b.Property<float>("RsiLower")
+                        .HasColumnType("real");
+
+                    b.Property<float>("RsiUpper")
+                        .HasColumnType("real");
+
+                    b.Property<int>("StochRsiLength")
+                        .HasColumnType("int");
+
+                    b.Property<float>("StochRsiLower")
+                        .HasColumnType("real");
+
+                    b.Property<float>("StochRsiUpper")
+                        .HasColumnType("real");
 
                     b.Property<decimal>("StopLoss")
                         .HasColumnType("decimal(18,2)");
@@ -614,6 +709,9 @@ namespace AutoTraderApp.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("varbinary(max)");
 
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ProfileImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -714,6 +812,73 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("UserTradingAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("AutoTraderApp.Domain.ExternalModels.Telegram.TelegramBotConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BotToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("WebhookUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TelegramBotConfigs");
+                });
+
+            modelBuilder.Entity("AutoTraderApp.Domain.ExternalModels.Telegram.TelegramUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ChannelId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ChatId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TelegramUsers");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerAccount", b =>

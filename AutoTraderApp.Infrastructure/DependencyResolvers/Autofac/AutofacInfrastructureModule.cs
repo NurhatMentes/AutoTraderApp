@@ -4,11 +4,12 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Core.Utilities.Settings;
 using AutoTraderApp.Domain.Entities;
-using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using AutoTraderApp.Infrastructure.Services.Alpaca;
-using AutoTraderApp.Infrastructure.Services.Automation;
+using AutoTraderApp.Infrastructure.Services.Automation.Playwrights;
 using AutoTraderApp.Infrastructure.Services.MarketData;
+using AutoTraderApp.Infrastructure.Services.Polygon;
+using AutoTraderApp.Infrastructure.Services.Telegram;
 using AutoTraderApp.Infrastructure.Services.TradingView;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -57,18 +58,10 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             // Alpaca
             builder.Register(ctx =>
             {
-                var configuration = ctx.Resolve<IConfiguration>();
-                var settings = new AlpacaSettings();
-                configuration.GetSection("AlpacaSettings").Bind(settings);
-
-                return Options.Create(settings);
-            }).As<IOptions<AlpacaSettings>>().SingleInstance();
-
-            builder.Register(ctx =>
-            {
                 var httpClientFactory = ctx.Resolve<IHttpClientFactory>();
                 var brokerAccountRepository = ctx.Resolve<IBaseRepository<BrokerAccount>>();
-                return new AlpacaService(httpClientFactory, brokerAccountRepository);
+                var brokerLog = ctx.Resolve<IBaseRepository<BrokerLog>>();
+                return new AlpacaService(httpClientFactory, brokerAccountRepository, brokerLog);
             }).As<IAlpacaService>().InstancePerLifetimeScope();
 
 
@@ -91,7 +84,6 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
                    .As<ITradingViewAutomationService>()
                    .InstancePerLifetimeScope();
 
-
             // TradingView Log Service
             builder.RegisterType<TradingViewLogService>()
                    .AsSelf()
@@ -101,6 +93,21 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             builder.RegisterType<TradingViewSignalLogService>()
                    .AsSelf()
                    .InstancePerLifetimeScope();
+
+            // Telegram
+            builder.RegisterType<TelegramBotService>()
+                .As<ITelegramBotService>()
+                .InstancePerLifetimeScope();
+
+            // Polygon
+            builder.RegisterType<PolygonService>()
+                   .As<IPolygonService>()
+                   .InstancePerLifetimeScope();
+
+            // Selenium
+            builder.RegisterType<TradingViewSelenium>()
+      .As<ITradingViewSeleniumService>()
+      .InstancePerLifetimeScope();
         }
     }
 }

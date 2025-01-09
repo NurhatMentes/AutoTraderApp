@@ -11,8 +11,17 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         Task<OrderResponse> CancelOrderAsync(string orderId, Guid brokerAccountId);
         Task<List<PositionResponse>> GetPositionsAsync(Guid brokerAccountId);
         Task<List<Portfolio>> GetPortfolioAsync(Guid brokerAccountId);
-        Task<IResult> ClosePositionAsync(string symbol, decimal quantity, Guid userId);
+        Task<IResult> ClosePositionAsync(string symbol, decimal? quantity, Guid brokerAccountId);
         Task<List<OrderResponse>> GetFilledOrdersAsync(Guid brokerAccountId, DateTime startDate, DateTime endDate);
         Task<Dictionary<string, string>> CalculateDailyPnL(List<OrderResponse> orders);
+        Task<IResult> SellLossMakingPositionsAsync(Guid brokerAccountId, decimal lossThresholdPercentage = -5);
+        Task<IResult> SellAllPositionsAtEndOfDayAsync(Guid brokerAccountId);
+        Task<PositionResponse> GetPositionBySymbolAsync(string symbol, Guid brokerAccountId);
+        Task<IResult> ClosePartialPositionAsync(string symbol, decimal quantity, Guid brokerAccountId);
+        Task<AssetDetails> GetAssetDetailsAsync(string symbol, Guid brokerAccountId);
+        Task<OrderResponse[]> GetAllOrdersAsync(Guid brokerAccountId);
+        Task<decimal> GetLatestPriceAsync(string symbol, Guid brokerAccountId);
+        public bool AlpacaLog(Guid brokerAccountId, string msg);
+        Task<IResult> CloseAllPositionAsync(Guid brokerAccountId);
     }
 }

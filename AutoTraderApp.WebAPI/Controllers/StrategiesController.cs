@@ -1,4 +1,6 @@
 ﻿using AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyToMultipleStocks;
+using AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyToMultipleStocksSync;
+using AutoTraderApp.Application.Features.Strategies.Commands.CreateStrategy;
 using AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingViewStrategyById;
 using AutoTraderApp.Application.Features.Strategies.DTOs;
 using AutoTraderApp.Core.Utilities.Repositories;
@@ -29,7 +31,18 @@ namespace AutoTraderApp.WebAPI.Controllers
             return Ok(strategies);
         }
 
-        [HttpPost("create-strategy")]
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateStrategy([FromBody] CreateStrategyRequest request)
+        {
+            var result = await _mediator.Send(new CreateStrategyCommand(request));
+
+            if (result.Success)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
+
+        [HttpPost("send-tradingView-strategy")]
         public async Task<IActionResult> CreateStrategy(Guid strategyId, Guid brokerAccountId, Guid userId)
         {
             var result = await _mediator.Send(new CreateTradingViewStrategyByIdCommand { StrategyId = strategyId, BrokerAccountId = brokerAccountId, UserId = userId });
@@ -39,8 +52,8 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(result);
         }
 
-        [HttpPost("apply-strategy-to-multiple-stocks")]
-        public async Task<IActionResult> ApplyStrategyToMultipleStocks(Guid strategyId, Guid brokerAccountId, Guid userId)
+        [HttpPost("async-apply-strategy-to-multiple-stocks")]
+        public async Task<IActionResult> ApplyStrategyToMultipleStocksAsync(Guid strategyId, Guid brokerAccountId, Guid userId)
         {
             var result = await _mediator.Send(new ApplyStrategyToMultipleStocksCommand
             {
@@ -55,5 +68,20 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(result);
         }
 
+        [HttpPost("sync-apply-strategy-to-multiple-stocks")]
+        public async Task<IActionResult> ApplyStrategyToMultipleStocksSync(Guid strategyId, Guid brokerAccountId, Guid userId)
+        {
+            var result = await _mediator.Send(new ApplyStrategyToMultipleStocksSyncCommand
+            {
+                StrategyId = strategyId,
+                BrokerAccountId = brokerAccountId,
+                UserId = userId
+            });
+
+            if (result.Success)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Application.Features.Orders.Commands.PlaceOrder;
 using AutoTraderApp.Application.Features.Orders.DTOs;
+using AutoTraderApp.Application.Features.Position.Commands.ClosePosition;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -50,7 +51,5 @@ namespace AutoTraderApp.WebAPI.Controllers
                 message = result.Message
             });
         }
-
-
     }
 }

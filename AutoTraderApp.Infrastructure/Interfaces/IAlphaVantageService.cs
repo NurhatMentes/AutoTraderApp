@@ -5,7 +5,7 @@ namespace AutoTraderApp.Infrastructure.Interfaces
 {
     public interface IAlphaVantageService
     {
-        Task<decimal?> GetCurrentPrice(string symbol);
+        Task<string?> GetCurrentPrice(string symbol);
         Task<IEnumerable<Price>> GetHistoricalPrices(string symbol, DateTime startDate, DateTime endDate);
         Task<IEnumerable<Price>> GetIntraday(string symbol, string interval = "1min");
         Task<List<GainerDto>> GetTopGainersAsync();

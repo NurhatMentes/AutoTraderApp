@@ -1,11 +1,11 @@
 ﻿using AutoTraderApp.Core.Utilities.Calculators;
+using AutoTraderApp.Core.Utilities.Generator;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
-using System.Globalization;
 
 namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingViewStrategyById
 {
@@ -83,7 +83,8 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
 
 
 
-            var script = GenerateStrategyScript(strategy, quantity);
+            var script = StrategyScriptGenerator.GenerateScript(strategy, quantity, null);
+
 
             var strategySuccess = await _automationService.CreateStrategyAsync(strategy.StrategyName, strategy.Symbol, script, strategy.WebhookUrl, request.UserId);
             if (!strategySuccess)
@@ -101,7 +102,6 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
                 "buy",
                 strategy.Symbol,
                 quantity,
-                strategy.EntryPrice ,
                 request.BrokerAccountId,
                 request.UserId
             );
@@ -115,30 +115,6 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
 
             await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturmma", "Başarılı", strategy.Symbol, "Alarm oluşturulamadı.");
             return new SuccessResult("Strateji ve alert TradingView'de başarıyla oluşturuldu.");
-        }
-
-
-        private string GenerateStrategyScript(Strategy strategy, int quantity)
-        {
-            return $@"
-//@version=6
-strategy(""{strategy.StrategyName}"", overlay=true)
-
-// Koşullar
-longCondition = close > {strategy.EntryPrice.ToString(CultureInfo.InvariantCulture)}
-if (longCondition)
-    strategy.entry(""Buy"", strategy.long, qty={quantity})
-
-shortCondition = close < {strategy.StopLoss.ToString(CultureInfo.InvariantCulture)}
-if (shortCondition)
-    strategy.entry(""Sell"", strategy.short, qty={quantity})
-
-// Hedef kar ve zarar sınırları
-if (close > {strategy.TakeProfit.ToString(CultureInfo.InvariantCulture)})
-    strategy.close(""Buy"")
-if (close < {strategy.StopLoss.ToString(CultureInfo.InvariantCulture)})
-    strategy.close(""Sell"")
-";
         }
     }
 }

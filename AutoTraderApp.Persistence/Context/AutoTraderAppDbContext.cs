@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Domain.Common;
 using AutoTraderApp.Domain.Entities;
+using AutoTraderApp.Domain.ExternalModels.Telegram;
 using AutoTraderApp.Persistence.EntityConfigurations;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
@@ -26,6 +27,10 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<TradingViewLog> tradingViewLogs { get; set; }
         public DbSet<TradingViewSignalLog> tradingViewSignalLogs { get; set; }
         public DbSet<CombinedStock> combinedStocks { get; set; }
+        public DbSet<TelegramUser> TelegramUsers { get; set; }
+        public DbSet<TelegramBotConfig> TelegramBotConfigs { get; set; }
+        public DbSet<BrokerLog> BrokerLogs { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,6 +1,7 @@
 ﻿using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.Enums;
 using AutoTraderApp.Persistence.Context;
+using System.Security.Claims;
 
 namespace AutoTraderApp.Persistence.Seeds;
 
@@ -24,7 +25,42 @@ public static class DataSeeder
         }
 
 
-        await context.SaveChangesAsync();
-        Console.WriteLine("Veritabanı seed işlemleri tamamlandı.");
+        // Strategy Seed
+        if (!context.Strategies.Any())
+        {
+            var strategies = new List<Strategy>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    StrategyName = "Momentum Strategy",
+                    Symbol = "AAPL",
+                    EntryPrice = 150.00m,
+                    StopLoss = 145.00m,
+                    TakeProfit = 160.00m,
+                    TimeFrame = "1D",
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    CreatedByUserId =  Guid.Empty   
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    StrategyName = "Reversal Strategy",
+                    Symbol = "GOOGL",
+                    EntryPrice = 2800.00m,
+                    StopLoss = 2750.00m,
+                    TakeProfit = 2900.00m,
+                    TimeFrame = "1H",
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    CreatedByUserId =  Guid.Empty
+                }
+            };
+
+
+            await context.Strategies.AddRangeAsync(strategies);
+            Console.WriteLine("Veritabanı seed işlemleri tamamlandı.");
+        }
     }
 }

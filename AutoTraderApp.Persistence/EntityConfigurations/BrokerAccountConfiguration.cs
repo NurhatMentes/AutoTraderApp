@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AutoTraderApp.Persistence.EntityConfigurations;
 
-public class BrokerAccountConfiguration : IEntityTypeConfiguration<BrokerAccount>
+public partial class BrokerAccountConfiguration : IEntityTypeConfiguration<BrokerAccount>
 {
     public void Configure(EntityTypeBuilder<BrokerAccount> builder)
     {

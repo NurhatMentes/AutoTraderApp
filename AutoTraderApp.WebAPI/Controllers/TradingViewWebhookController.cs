@@ -1,6 +1,9 @@
 ﻿using AutoTraderApp.Application.Features.TradingView.Commands.ProcessTradingViewSignal;
+using AutoTraderApp.Application.Features.TradingView.Commands.SendStrategy;
 using AutoTraderApp.Application.Features.TradingView.DTOs;
+using AutoTraderApp.Domain.ExternalModels.TradingView;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoTraderApp.WebAPI.Controllers
@@ -25,5 +28,6 @@ namespace AutoTraderApp.WebAPI.Controllers
 
             return BadRequest(result);
         }
+
     }
 }

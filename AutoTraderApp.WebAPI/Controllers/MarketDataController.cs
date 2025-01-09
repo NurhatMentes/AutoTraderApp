@@ -1,7 +1,7 @@
-﻿using AutoTraderApp.Application.Features.MarketData.Alpaca.Queries;
-using AutoTraderApp.Core.Utilities.Results;
+﻿using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
+using AutoTraderApp.Infrastructure.Services.Alpaca;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,24 +12,54 @@ namespace AutoTraderApp.WebAPI.Controllers
     [ApiController]
     public class MarketDataController : BaseController
     {
-        private readonly IMarketDataService _marketDataService;
+        private readonly IAlphaVantageService _marketDataService;
         private readonly IMediator _mediator;
+        private readonly IAlpacaService _alpacaService;
+        private readonly IPolygonService _polygonService;
 
 
-        public MarketDataController(IMarketDataService marketDataService, IMediator mediator)
+        public MarketDataController(IAlphaVantageService marketDataService, IMediator mediator, IAlpacaService alpacaService, IPolygonService polygonService)
         {
             _marketDataService = marketDataService;
             _mediator = mediator;
+            _alpacaService = alpacaService;
+            _polygonService = polygonService;
+        }
+
+        [HttpGet("polygon/stock/{symbol}")]
+        public async Task<IActionResult> PolygonGetStock(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return BadRequest("Geçerli bir sembol belirtiniz.");
+            }
+
+            var result = await _polygonService.GetStockPriceAsync(symbol);
+            return Ok(result);
+        }
+
+        [HttpGet("alpaca-latest-price")]
+        public async Task<IActionResult> AlpacaGetLatestPrice([FromQuery] string symbol, [FromQuery] Guid brokerAccountId)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return BadRequest("Geçerli bir sembol belirtiniz.");
+            }
+
+            var latestPrice = await _alpacaService.GetLatestPriceAsync(symbol.ToUpperInvariant(), brokerAccountId);
+            return Ok(latestPrice);
+
+
         }
 
         [HttpGet("alphaVantage/price/{symbol}")]
         public async Task<IActionResult> AlphaVantageGetCurrentPrice(string symbol)
         {
             var price = await _marketDataService.GetCurrentPrice(symbol);
-            if (!price.HasValue)
+            if (price == null)
                 return NotFound($"Sembol için fiyat bulunamadı: {symbol}");
 
-            return Ok(new SuccessDataResult<decimal>(price.Value, $"Şu anki fiyat {symbol}"));
+            return Ok(new SuccessResult($"Şu anki fiyat {price}"));
         }
 
         [HttpGet("alphaVantage/historical/{symbol}")]
@@ -54,16 +84,26 @@ namespace AutoTraderApp.WebAPI.Controllers
 
             return Ok(new SuccessDataResult<IEnumerable<Price>>(intradayPrices, $"Gün içi fiyatlar {symbol} ({interval})"));
         }
-        [HttpGet]
-        public async Task<IActionResult> GetMarketData([FromQuery] string? symbol = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 100)
-        {
-            var result = await _mediator.Send(new GetMarketDataQuery { Symbol = symbol, Page = page, PageSize = pageSize });
-            if (!result.Success)
-            {
-                return BadRequest(result.Message);
-            }
 
-            return Ok(result);
+        [HttpGet("alphaVantage/top_gainers")]
+        public async Task<IActionResult> GetTopGainers()
+        {
+            var gainers = await _marketDataService.GetTopGainersAsync();
+            return Ok(gainers);
+        }
+
+        [HttpGet("alphaVantage/top_losers")]
+        public async Task<IActionResult> GetTopLosers()
+        {
+            var losers = await _marketDataService.GetTopLosersAsync();
+            return Ok(losers);
+        }
+
+        [HttpGet("alphaVantage/most_activite")]
+        public async Task<IActionResult> GetMostActive()
+        {
+            var actives = await _marketDataService.GetMostActiveAsync();
+            return Ok(actives);
         }
     }
 }

@@ -74,11 +74,11 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                 return new ErrorResult("TradingView alarmları temizlenemedi.");
 
             // UpdateCombinedStockListCommand çalıştırılıyor
-            //var updateResult = _mediator.Send(new UpdateCombinedStockListCommand()).Result;
-            //if (!updateResult)
-            //{
-            //    return new ErrorResult($"Birleşik hisse güncellenemedi");
-            //}
+            var updateResult = _mediator.Send(new UpdateCombinedStockListCommand()).Result;
+            if (!updateResult)
+            {
+                return new ErrorResult($"Birleşik hisse güncellenemedi");
+            }
 
             var combinedStocks = _combinedStockRepository.GetAllAsync().Result;
             if (combinedStocks == null || !combinedStocks.Any())

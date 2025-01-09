@@ -81,27 +81,45 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 if (account == null)
                     return new ErrorResult("Kullanıcı hesabı bilgileri alınamadı.");
 
-                decimal accountValue = account.Equity;
+                decimal accountValue = (decimal)account.BuyingPower;
                 Console.WriteLine($"TransactionId: {transactionId} - Hesap değeri: {accountValue}");
 
 
                 //risk kontrolü
-                //decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountValue);
-                //var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
-                //Console.WriteLine($"Account Equity: {account.Equity}");
-                //Console.WriteLine($"Buying Power: {account.BuyingPower}");
-                //Console.WriteLine($"Risk Percentage: {riskPercentage}");
-                //Console.WriteLine($"Calculated Risk Limit: {account.Equity * riskPercentage}");
-                //Console.WriteLine($"Signal Quantity: {signal.Quantity}");
-                //Console.WriteLine($"Latest Price: {latestPrice}");
-                //Console.WriteLine($"Signal Total Value: {signal.Quantity * latestPrice}");
-                //Console.WriteLine($"Buying Power: {account.BuyingPower}, Signal Total Cost: {signal.Quantity * latestPrice}, Risk Limit: {account.Equity * riskPercentage}");
+                decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountValue);
+                var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
+                Console.WriteLine($"Account Equity: {account.Equity}");
+                Console.WriteLine($"Buying Power: {account.BuyingPower}");
+                Console.WriteLine($"Risk Percentage: {riskPercentage}");
+                Console.WriteLine($"Calculated Risk Limit: {account.Equity * riskPercentage}");
+                Console.WriteLine($"Signal Quantity: {signal.Quantity}");
+                Console.WriteLine($"Latest Price: {latestPrice}");
+                Console.WriteLine($"Signal Total Value: {signal.Quantity * latestPrice}");
+                Console.WriteLine($"Buying Power: {account.BuyingPower}, Signal Total Cost: {signal.Quantity * latestPrice}, Risk Limit: {account.Equity * riskPercentage}");
 
+               decimal riskLimit = accountValue * riskPercentage;
+                decimal signalTotalCost = signal.Quantity * latestPrice;
 
-                //if (signal.Quantity * latestPrice > account.Equity * riskPercentage)
-                //{
-                //    return new ErrorResult($"Risk limiti aşıldı: {signal.Symbol}. Sinyal Toplam Maliyeti: {signal.Quantity * latestPrice}, Risk Limiti: {account.Equity * riskPercentage}");
-                //}
+                // Risk limiti kontrolü
+                if (signalTotalCost > riskLimit)
+                {
+                    // Risk limitine uygun miktar hesaplanıyor
+                    int adjustedQuantity = (int)(riskLimit / latestPrice);
+                    Console.WriteLine($"Risk limitini aşan sinyal: {signal.Symbol}. Orijinal Miktar: {signal.Quantity}, Ayarlanan Miktar: {adjustedQuantity}, Risk Limiti: {riskLimit}");
+
+                    if (adjustedQuantity > 0)
+                    {
+                        signal.Quantity = adjustedQuantity;
+                        _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Risk limitini aşan sinyal: {signal.Symbol}. Ayarlanan Miktar: {adjustedQuantity}, Risk Limiti: {riskLimit}");
+                    }
+                    else
+                    {
+                        // Hiçbir şey satın alınamıyorsa hata döndür
+                        return new ErrorResult($"Risk limiti nedeniyle {signal.Symbol} için işlem gerçekleştirilemiyor. Risk Limiti: {riskLimit}");
+                    }
+                }
+
+                var testfiyat = signal.Quantity;
 
                 // Mevcut açık emirleri kontrol et
                 var openOrders = await _alpacaService.GetAllOrdersAsync(signal.BrokerAccountId);
@@ -133,13 +151,13 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
                 // Mevcut pozisyon miktarını kontrol et
                 var position = await _alpacaService.GetPositionBySymbolAsync(signal.Symbol, signal.BrokerAccountId);
-                //if (position == null || Convert.ToDecimal(position.AvailableQuantity) == 0)
-                //{
+                if (signal.Action == "SELL" && Convert.ToDecimal(position.AvailableQuantity) == 0)
+                {
 
-                //    _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Satılacak pozisyon bulunamadı: {signal.Symbol}");
-                //    Console.WriteLine($"Satılacak pozisyon bulunamadı ({signal.Action}): {signal.Symbol}");
-                //    return new ErrorResult($"{signal.Symbol} hissesi için açık bir pozisyon bulunamadı.");
-                //}
+                    _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Satılacak pozisyon bulunamadı: {signal.Symbol}");
+                    Console.WriteLine($"Satılacak pozisyon bulunamadı ({signal.Action}): {signal.Symbol}");
+                    return new ErrorResult($"{signal.Symbol} hissesi için açık bir pozisyon bulunamadı.");
+                }
                 if (signal.Action == "SELL" && Convert.ToDecimal(position.AvailableQuantity) < signal.Quantity)
                 {
                     Console.WriteLine($"Yetersiz miktar: Mevcut {position.AvailableQuantity}, Gerekli {signal.Quantity}");

@@ -43,8 +43,8 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 return;
 
             var currentTime = nowTurkeyTime.TimeOfDay;
-            if ((currentTime >= new TimeSpan(16, 30, 0) && currentTime <= new TimeSpan(16, 33, 0)) ||
-                (currentTime >= new TimeSpan(22, 50, 0) && currentTime <= new TimeSpan(23, 00, 0)))
+            if ((currentTime >= new TimeSpan(17, 30, 0) && currentTime <= new TimeSpan(17, 33, 0)) ||
+                (currentTime >= new TimeSpan(23, 50, 10) && currentTime <= new TimeSpan(24, 00, 0)))
             {
                 Console.WriteLine("SellAllPositionsAtEndOfDayAsync çalıştırılıyor...");
 

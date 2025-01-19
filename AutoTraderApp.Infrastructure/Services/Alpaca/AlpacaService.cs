@@ -1,11 +1,8 @@
-﻿using Alpaca.Markets;
-using AutoTraderApp.Core.Utilities.Repositories;
+﻿using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
-using Microsoft.Playwright;
-using OpenQA.Selenium.BiDi.Modules.Network;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
@@ -80,12 +77,15 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
 
 
-        public bool AlpacaLog(Guid brokerAccountId, string msg)
+        public async Task<bool> AlpacaLog(Guid brokerAccountId, string symbol, decimal? price, int? quantity, string msg)
         {
-            _brokerLog.AddAsync(new BrokerLog
+            await _brokerLog.AddAsync(new BrokerLog
             {
                 BrokerAccountId = brokerAccountId,
-                Message = msg
+                Message = msg,
+                Symbol = symbol,
+                Price = price,
+                Quantity = quantity
             });
 
             return true;
@@ -152,7 +152,10 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 await _brokerLog.AddAsync(new BrokerLog
                 {
                     BrokerAccountId = brokerAccountId,
-                    Message = $"Yeni emir oluşturuldu: {orderResponse.Symbol} - {orderResponse.Quantity} adet",
+                    Symbol=orderResponse.Symbol,
+                    Price = Convert.ToDecimal(orderResponse.LimitPrice),
+                    Quantity = Convert.ToInt16(orderResponse.Quantity),
+                    Message = $"Yeni emir oluşturuldu"
 
                 });
 
@@ -161,10 +164,14 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             }
             catch (Exception ex)
             {
+                var orderResponse = JsonSerializer.Deserialize<OrderResponse>(responseContent);
                 // Log işlemi
                 await _brokerLog.AddAsync(new BrokerLog
                 {
                     BrokerAccountId = brokerAccountId,
+                    Symbol = orderResponse.Symbol,
+                    Price = Convert.ToDecimal(orderResponse.LimitPrice),
+                    Quantity = Convert.ToInt16(orderResponse.Quantity),
                     Message = $"Emir Oluştulurken hata Oldu:{ex.Message} - Yanıt: {responseContent}",
 
                 });
@@ -557,6 +564,92 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<string> GenerateDailyTradeReportAsync(Guid brokerAccountId, DateTime tradeDate)
+        {
+            var orders = await GetFilledOrdersAsync(brokerAccountId, tradeDate.Date, tradeDate.Date.AddDays(1));
+            if (orders == null || !orders.Any())
+                return "Günlük işlem bulunamadı.";
+
+            var tradeDetails = new List<DailyTradeDetails>();
+
+            foreach (var group in orders.GroupBy(o => o.Symbol))
+            {
+                var symbol = group.Key;
+                var buyOrders = group.Where(o => o.Side.Equals("buy", StringComparison.OrdinalIgnoreCase)).ToList();
+                var sellOrders = group.Where(o => o.Side.Equals("sell", StringComparison.OrdinalIgnoreCase)).ToList();
+
+                // Toplam Alım ve Satış Miktarları ve Maliyetleri
+                decimal totalBuyAmount = buyOrders.Sum(o => Convert.ToDecimal(o.FilledAvgPrice) * Convert.ToInt32(o.FilledQuantity));
+                decimal totalSellAmount = sellOrders.Sum(o => Convert.ToDecimal(o.FilledAvgPrice) * Convert.ToInt32(o.FilledQuantity));
+
+                decimal totalBuyQuantity = buyOrders.Sum(o => Convert.ToInt16(o.FilledQuantity));
+                decimal totalSellQuantity = sellOrders.Sum(o => Convert.ToInt32(o.FilledQuantity));
+
+                // Kar/Zarar Hesaplama
+                decimal pnl = totalSellAmount - totalBuyAmount;
+                decimal pnlPercentage = totalBuyAmount > 0 ? (pnl / totalBuyAmount) * 100 : 0;
+
+                // StopLoss Kontrolü
+                bool stopLossSales = sellOrders.Any(o => o.OrderClass == "bracket" && o.StopLoss != null);
+
+                tradeDetails.Add(new DailyTradeDetails
+                {
+                    Symbol = symbol,
+                    TotalBuyAmount = Math.Round(totalBuyAmount, 2),
+                    TotalSellAmount = Math.Round(totalSellAmount, 2),
+                    TotalBuyQuantity = totalBuyQuantity,
+                    TotalSellQuantity = totalSellQuantity,
+                    PnL = Math.Round(pnl, 2),
+                    PnLPercentage = Math.Round(pnlPercentage, 2),
+                    StopLossSale = stopLossSales
+                });
+            }
+
+            // Genel analiz
+            var totalBuyAmountOverall = tradeDetails.Sum(t => t.TotalBuyAmount);
+            var totalSellAmountOverall = tradeDetails.Sum(t => t.TotalSellAmount);
+            var totalPnL = totalSellAmountOverall - totalBuyAmountOverall;
+            var totalPnLPercentage = totalBuyAmountOverall > 0 ? (totalPnL / totalBuyAmountOverall) * 100 : 0;
+
+            var mostProfitable = tradeDetails.OrderByDescending(t => t.PnLPercentage).FirstOrDefault();
+            var mostLoss = tradeDetails.OrderBy(t => t.PnLPercentage).FirstOrDefault();
+
+            // Çıktı formatı
+            var reportBuilder = new StringBuilder();
+            reportBuilder.AppendLine("Her Hisse için Analiz");
+            for (var i = 0; i < tradeDetails.Count; i++)
+            {
+                var trade = tradeDetails[i];
+                var result = trade.PnL >= 0 ? "Kar" : "Zarar";
+                reportBuilder.AppendLine($"{i + 1}. {trade.Symbol}");
+                reportBuilder.AppendLine($"Toplam Alım Maliyeti: ${trade.TotalBuyAmount:N2}");
+                reportBuilder.AppendLine($"Toplam Satış Geliri: ${trade.TotalSellAmount:N2}");
+                reportBuilder.AppendLine($"Net Kar/Zarar: ${trade.PnL:N2} ({result})");
+                reportBuilder.AppendLine($"Yüzde Kar/Zarar: {trade.PnLPercentage:+0.00;-0.00}%");
+                reportBuilder.AppendLine();
+            }
+
+            reportBuilder.AppendLine("Genel Analiz");
+            reportBuilder.AppendLine($"Toplam Alım Maliyeti: ${totalBuyAmountOverall:N2}");
+            reportBuilder.AppendLine($"Toplam Satış Geliri: ${totalSellAmountOverall:N2}");
+            reportBuilder.AppendLine($"Net Kar/Zarar: ${totalPnL:N2} ({(totalPnL >= 0 ? "Kar" : "Zarar")})");
+            reportBuilder.AppendLine($"Yüzde Kar/Zarar: {totalPnLPercentage:+0.00;-0.00}%");
+            reportBuilder.AppendLine();
+
+            if (mostProfitable != null)
+            {
+                reportBuilder.AppendLine($"En Karlı Hisse: {mostProfitable.Symbol} (%{mostProfitable.PnLPercentage:+0.00;-0.00} kar)");
+            }
+            if (mostLoss != null)
+            {
+                reportBuilder.AppendLine($"En Zararlı Hisse: {mostLoss.Symbol} (%{mostLoss.PnLPercentage:+0.00;-0.00} zarar)");
+            }
+
+            return reportBuilder.ToString();
+        }
+
+
 
     }
 }

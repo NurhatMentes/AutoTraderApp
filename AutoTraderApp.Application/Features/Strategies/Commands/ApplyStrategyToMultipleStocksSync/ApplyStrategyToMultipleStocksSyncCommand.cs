@@ -121,9 +121,9 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
 
                     Console.WriteLine($"---------------BUY Alert Creating for: {stock.Symbol}");
                     var buyAlertSuccess = _tradingViewSeleniumService.CreateAlertSync(
-                        $"{symbol}/Buy/{strategy.StrategyName}",
+                        $"{symbol}/{strategy.StrategyName}",
                         strategy.WebhookUrl,
-                        "buy",
+                        "{{strategy.order.action}}",
                         stock.Symbol,
                         quantity,
                         request.BrokerAccountId,
@@ -139,27 +139,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                     }
 
 
-                    Thread.Sleep(TimeSpan.FromSeconds(2));
-                    Console.WriteLine($"---------------SELL Alert Creating for: {stock.Symbol}");
-                    var sellAlertSuccess = _tradingViewSeleniumService.CreateAlertSync(
-                        $"{symbol}/Sell/{strategy.StrategyName}",
-                        strategy.WebhookUrl,
-                        "sell",
-                        stock.Symbol,
-                        quantity,
-                        request.BrokerAccountId,
-                        request.UserId);
-
-                    if (sellAlertSuccess)
-                    {
-                        _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Sell Alarm Oluşturma", "Başarılı", stock.Symbol, "Sell alarmı başarıyla oluşturuldu.").Wait();
-                    }
-                    else
-                    {
-                        _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Sell Alarm Oluşturma", "Hata", stock.Symbol, "Sell alarmı oluşturulamadı.").Wait();
-                    }
-
-                    if (buyAlertSuccess && sellAlertSuccess)
+                    if (buyAlertSuccess)
                     {
                         _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturma", "Başarılı", stock.Symbol, "Buy ve Sell alarmları başarıyla oluşturuldu.").Wait();
                     }

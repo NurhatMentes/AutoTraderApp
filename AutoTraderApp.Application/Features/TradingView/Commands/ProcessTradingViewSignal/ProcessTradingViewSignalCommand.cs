@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Application.Features.Strategies.Helpers;
 using AutoTraderApp.Application.Features.TradingView.DTOs;
+using AutoTraderApp.Core.Utilities.Calculators;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Core.Utilities.Services;
@@ -7,6 +8,7 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
+using Newtonsoft.Json;
 using System.Diagnostics;
 
 namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTradingViewSignal
@@ -48,7 +50,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
         {
             var signal = request.Signal;
             var transactionId = Guid.NewGuid();
-            Console.WriteLine($"BROKER ACCOUNT ID: {signal.BrokerAccountId}");
+            var position = await _alpacaService.GetPositionBySymbolAsync(signal.Symbol, signal.BrokerAccountId);
 
             try
             {
@@ -64,8 +66,8 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
                 // ABD borsa saatleri kontrolü (Türkiye saatine göre)
                 var nowTurkeyTime = DateTime.UtcNow.AddHours(3);
-                var marketOpen = new TimeSpan(16, 30, 0);
-                var marketClose = new TimeSpan(23, 35, 0);
+                var marketOpen = new TimeSpan(17, 30, 0);
+                var marketClose = new TimeSpan(23, 45, 0);
                 if (nowTurkeyTime.TimeOfDay < marketOpen || nowTurkeyTime.TimeOfDay > marketClose)
                     return new ErrorResult("Borsa saatleri dışında sinyal işlenemez.");
 
@@ -73,179 +75,204 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 var openPositions = await _alpacaService.GetPositionsAsync(brokerAccount.Id);
                 var existingPosition = openPositions.FirstOrDefault(p => p.Symbol == signal.Symbol);
 
-                var latestPrice = await _alpacaService.GetLatestPriceAsync(signal.Symbol, signal.BrokerAccountId);
-                Console.WriteLine($"{signal.Action} - {latestPrice} - {signal.Symbol}");
+                var price = await _alpacaService.GetLatestPriceAsync(signal.Symbol, signal.BrokerAccountId);
+                Console.WriteLine($"{signal.Action} - {price} - {signal.Symbol}");
 
-                // Risk kontrolü
+                // Hesap bilgileri ve buying power kontrolü
                 var account = await _alpacaService.GetAccountInfoAsync(brokerAccount.Id);
                 if (account == null)
                     return new ErrorResult("Kullanıcı hesabı bilgileri alınamadı.");
 
-                decimal accountValue = (decimal)account.BuyingPower;
-                Console.WriteLine($"TransactionId: {transactionId} - Hesap değeri: {accountValue}");
+                decimal accountBuyingPower = (decimal)account.BuyingPower;
+                Console.WriteLine($"TransactionId: {transactionId} - Buying Power: {accountBuyingPower}");
 
+                // Risk hesaplama
+                decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountBuyingPower);
+                decimal riskLimit = accountBuyingPower * riskPercentage;
+                decimal signalTotalCost = signal.Quantity * price;
 
-                //risk kontrolü
-                decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountValue);
-                var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
                 Console.WriteLine($"Account Equity: {account.Equity}");
-                Console.WriteLine($"Buying Power: {account.BuyingPower}");
+                Console.WriteLine($"Buying Power: {accountBuyingPower}");
                 Console.WriteLine($"Risk Percentage: {riskPercentage}");
-                Console.WriteLine($"Calculated Risk Limit: {account.Equity * riskPercentage}");
+                Console.WriteLine($"Calculated Risk Limit: {riskLimit}");
                 Console.WriteLine($"Signal Quantity: {signal.Quantity}");
-                Console.WriteLine($"Latest Price: {latestPrice}");
-                Console.WriteLine($"Signal Total Value: {signal.Quantity * latestPrice}");
-                Console.WriteLine($"Buying Power: {account.BuyingPower}, Signal Total Cost: {signal.Quantity * latestPrice}, Risk Limit: {account.Equity * riskPercentage}");
+                Console.WriteLine($"Latest Price: {price}");
+                Console.WriteLine($"Signal Total Value: {signalTotalCost}");
 
-               decimal riskLimit = accountValue * riskPercentage;
-                decimal signalTotalCost = signal.Quantity * latestPrice;
-
-                // Risk limiti kontrolü
-                if (signalTotalCost > riskLimit)
+                // Minimum toplam fiyat kontrolü
+                if (signalTotalCost < 2500)
                 {
-                    // Risk limitine uygun miktar hesaplanıyor
-                    int adjustedQuantity = (int)(riskLimit / latestPrice);
-                    Console.WriteLine($"Risk limitini aşan sinyal: {signal.Symbol}. Orijinal Miktar: {signal.Quantity}, Ayarlanan Miktar: {adjustedQuantity}, Risk Limiti: {riskLimit}");
+                    signal.Quantity = QuantityCalculator.CalculateQuantity(accountBuyingPower, riskPercentage, price, price * 0.95M); // %5 zarar durdurma ile minimum fiyat kontrolü
+                    signalTotalCost = signal.Quantity * price;
+                    Console.WriteLine($"Toplam maliyet 2500 doların altındaydı, ayarlanan miktar: {signal.Quantity}");
+                }
+
+                // Buying Power kontrolü ve miktar ayarlaması
+                if (signalTotalCost > accountBuyingPower)
+                {
+                    int adjustedQuantity = (int)(accountBuyingPower / price);
+                    Console.WriteLine($"Buying power limitini aşan sinyal: {signal.Symbol}. Orijinal Miktar: {signal.Quantity}, Ayarlanan Miktar: {adjustedQuantity}, Buying Power: {accountBuyingPower}");
 
                     if (adjustedQuantity > 0)
                     {
                         signal.Quantity = adjustedQuantity;
-                        _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Risk limitini aşan sinyal: {signal.Symbol}. Ayarlanan Miktar: {adjustedQuantity}, Risk Limiti: {riskLimit}");
+                        signalTotalCost = signal.Quantity * price;
+                        await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, adjustedQuantity, $"Buying power limitini aşan sinyal. Buying Power: {accountBuyingPower}");
+                        Console.WriteLine($"Adjusted Quantity: {adjustedQuantity}, New Signal Total Cost: {signalTotalCost}");
                     }
                     else
                     {
-                        // Hiçbir şey satın alınamıyorsa hata döndür
-                        return new ErrorResult($"Risk limiti nedeniyle {signal.Symbol} için işlem gerçekleştirilemiyor. Risk Limiti: {riskLimit}");
+                        return new ErrorResult($"Buying power limiti nedeniyle {signal.Symbol} için işlem gerçekleştirilemiyor. Buying Power: {accountBuyingPower}");
                     }
                 }
 
-                var testfiyat = signal.Quantity;
+                // Risk limiti kontrolü ve miktar ayarlaması
+                if (signalTotalCost > riskLimit)
+                {
+                    int adjustedQuantity = (int)Math.Floor(riskLimit / price);
+                    signalTotalCost = adjustedQuantity * price;
+
+                    // Toplam maliyeti tekrar kontrol et ve ayarla
+                    if (signalTotalCost > riskLimit)
+                    {
+                        adjustedQuantity = (int)Math.Floor(riskLimit / price);
+                        signalTotalCost = adjustedQuantity * price;
+                    }
+
+                    Console.WriteLine($"Risk limitini aşan sinyal: {signal.Symbol}. Orijinal Miktar: {signal.Quantity}, Ayarlanan Miktar: {adjustedQuantity}, Risk Limiti: {riskLimit}");
+
+                    if (adjustedQuantity >= 1)
+                    {
+                        signal.Quantity = adjustedQuantity;
+                       // await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, adjustedQuantity, $"Risk limitini aşan sinyal. Risk Limiti: {riskLimit}. Yeni Miktar:{adjustedQuantity} ");
+                        Console.WriteLine($"Adjusted Quantity for Risk Limit: {adjustedQuantity}, New Signal Total Cost: {signalTotalCost}");
+                    }
+                    else
+                    {
+                        await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, adjustedQuantity, $"Risk limiti nedeniyle {signal.Symbol} için işlem gerçekleştirilemiyor. Risk Limiti: {riskLimit}, Fiyat: {price}");
+                        return new ErrorResult($"Risk limiti nedeniyle {signal.Symbol} için işlem gerçekleştirilemiyor. Risk Limiti: {riskLimit}, Fiyat: {price}");
+                    }
+                }
+
 
                 // Mevcut açık emirleri kontrol et
-                var openOrders = await _alpacaService.GetAllOrdersAsync(signal.BrokerAccountId);
-                var conflictingOrder = openOrders.FirstOrDefault(o => o.Symbol == signal.Symbol && o.Side != signal.Action);
-                if (conflictingOrder != null)
-                {
-                    _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Çakışan emir iptal edildi: {conflictingOrder.Symbol} - {conflictingOrder.OrderClass}");
-                    Console.WriteLine($"Çakışan emir iptal edildi: {conflictingOrder.Symbol} - {conflictingOrder.OrderClass}");
-                    await _alpacaService.CancelOrderAsync(conflictingOrder.OrderId, signal.BrokerAccountId);
-                }
+                //var openOrders = await _alpacaService.GetAllOrdersAsync(signal.BrokerAccountId);
+                //var conflictingOrder = openOrders.FirstOrDefault(o => o.Symbol == signal.Symbol && o.Side != signal.Action);
+                //if (conflictingOrder != null)
+                //{
+                //    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, latestPrice, null, $"Çakışan emir iptal edildi: Sınıf: {conflictingOrder.OrderClass}");
+                //    Console.WriteLine($"Çakışan emir iptal edildi: {conflictingOrder.Symbol} - {conflictingOrder.OrderClass}");
+                //    await _alpacaService.CancelOrderAsync(conflictingOrder.OrderId, signal.BrokerAccountId);
+                //}
 
                 // Varlığın kısa satışa uygunluğunu kontrol et
                 var assetDetails = await _alpacaService.GetAssetDetailsAsync(signal.Symbol, signal.BrokerAccountId);
                 if (signal.Action == "SELL" && !assetDetails.Shortable)
                 {
-                    _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Varlık kısa satışa uygun değil: {signal.Symbol}");
                     Console.WriteLine($"Varlık kısa satışa uygun değil: {signal.Symbol}");
-                    return new ErrorResult($"Varlık kısa satışa uygun değil: {signal.Symbol}");
+                    await _alpacaService.ClosePositionAsync(signal.Symbol, Convert.ToDecimal(position.AvailableQuantity), signal.BrokerAccountId);
+                    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, Convert.ToInt16(position.AvailableQuantity), $"Varlık kısa satışa uygun değil! Tüm miktar satıldı.");
                 }
 
                 // Varlığın ticarete uygunluğunu kontrol et
                 if (!assetDetails.Tradable)
                 {
 
-                    _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Varlık şu anda ticarete uygun değil: {signal.Symbol}");
+                    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, null, $"Varlık şu anda ticarete uygun değil");
                     Console.WriteLine($"Varlık şu anda ticarete uygun değil: {signal.Symbol}");
                     return new ErrorResult($"Varlık şu anda ticarete uygun değil: {signal.Symbol}");
                 }
 
                 // Mevcut pozisyon miktarını kontrol et
-                var position = await _alpacaService.GetPositionBySymbolAsync(signal.Symbol, signal.BrokerAccountId);
-                if (signal.Action == "SELL" && Convert.ToDecimal(position.AvailableQuantity) == 0)
+                if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase) && Convert.ToInt32(position.AvailableQuantity) == 0)
                 {
-
-                    _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Satılacak pozisyon bulunamadı: {signal.Symbol}");
+                    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, null, $"Satılacak pozisyon bulunamadı");
                     Console.WriteLine($"Satılacak pozisyon bulunamadı ({signal.Action}): {signal.Symbol}");
                     return new ErrorResult($"{signal.Symbol} hissesi için açık bir pozisyon bulunamadı.");
                 }
-                if (signal.Action == "SELL" && Convert.ToDecimal(position.AvailableQuantity) < signal.Quantity)
+                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (position != null && signal.Quantity == Convert.ToInt32(position.Quantity))
+                    {
+                        signal.Quantity += 1;
+                        Console.WriteLine($"Mevcut pozisyonla aynı miktar olduğu için miktar 1 artırıldı. Yeni miktar: {signal.Quantity}");
+                    }
+                }
+                if (signal.Action == "SELL" && Convert.ToDecimal(position.Quantity) < signal.Quantity)
                 {
                     Console.WriteLine($"Yetersiz miktar: Mevcut {position.AvailableQuantity}, Gerekli {signal.Quantity}");
-                    _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Yetersiz miktar: Mevcut {position.AvailableQuantity}, Gerekli {signal.Quantity}");
+                    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, Convert.ToInt16(position.AvailableQuantity), $"Yetersiz miktar. Gerekli {signal.Quantity}");
 
                     var sellQuantity = Math.Min(signal.Quantity, Convert.ToDecimal(position.AvailableQuantity));
                     signal.Quantity = Convert.ToInt32(sellQuantity);
                     Console.WriteLine($"Yeni satılacak miktat: {signal.Quantity}");
                 }
 
-                Console.WriteLine(signal.Action + "Sinyali Alındı: " + signal.Symbol);
 
 
 
-                // Retry mekanizması ile işlem yap
                 await ExecuteWithRetry(async () =>
                 {
-                    // Güncel fiyatın alınması
-                    var basePrice = Convert.ToDecimal(latestPrice);
+                    var basePrice = Convert.ToDecimal(price);
 
-                    // Minimum artış kurallarına uygun değer belirleme
-                    var minIncrement = basePrice < 1.00M ? 0.01M : (basePrice < 100.00M ? 0.01M : 0.1M);
+                    //*********Bracket emir türü
 
-                    // Stop Loss ve Take Profit hesaplama
-                    var calculatedStopPrice = basePrice - (basePrice * 6 / 100);
-                    var calculatedTakeProfitPrice = basePrice * (basePrice * 50 / 100);
+                    //var minIncrement = basePrice < 1.00M ? 0.0001M : 0.01M;
 
-                    // Alpaca'nın artış kriterlerine uygun hale getirme
-                    calculatedStopPrice = Math.Floor(calculatedStopPrice / minIncrement) * minIncrement;
-                    calculatedTakeProfitPrice = Math.Floor(calculatedTakeProfitPrice / minIncrement) * minIncrement;
+                    //var calculatedStopPrice = basePrice - (basePrice * 5 / 100);
+                    //var calculatedTakeProfitPrice = basePrice * (1 + 5M / 100M);
 
-                    // Alpaca'nın minimum artış kurallarına zorla uyum
-                    if (calculatedStopPrice >= basePrice)
-                    {
-                        calculatedStopPrice = Math.Floor((basePrice - minIncrement) / minIncrement) * minIncrement;
-                    }
+                    //calculatedStopPrice = Math.Floor(calculatedStopPrice / minIncrement) * minIncrement;
+                    //calculatedTakeProfitPrice = Math.Floor(calculatedTakeProfitPrice / minIncrement) * minIncrement;
 
-                    if (calculatedTakeProfitPrice <= calculatedStopPrice)
-                    {
-                        calculatedTakeProfitPrice = Math.Ceiling((calculatedStopPrice + minIncrement) / minIncrement) * minIncrement;
-                    }
+                    //if (calculatedStopPrice >= basePrice)
+                    //{
+                    //    calculatedStopPrice = basePrice - minIncrement;
+                    //}
 
+                    //if (calculatedTakeProfitPrice <= basePrice)
+                    //{
+                    //    calculatedTakeProfitPrice = basePrice + minIncrement;
+                    //}
+
+                    //if (calculatedTakeProfitPrice <= calculatedStopPrice)
+                    //{
+                    //    calculatedTakeProfitPrice = calculatedStopPrice + minIncrement;
+                    //}
+
+                    //if (calculatedStopPrice > basePrice - 0.01M)
+                    //{
+                    //    calculatedStopPrice = basePrice - 0.01M;
+                    //}
+
+                    //if (calculatedTakeProfitPrice < basePrice + 0.01M)
+                    //{
+                    //    calculatedTakeProfitPrice = basePrice + 0.01M;
+                    //}
+
+                    //Console.WriteLine($"calculatedStopPrice:{calculatedStopPrice} --- calculatedTakeProfitPrice:{calculatedTakeProfitPrice} --- basePrice:{basePrice}");
 
                     if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
                     {
-                        var currentTime = nowTurkeyTime.TimeOfDay;
-                        if (currentTime >= new TimeSpan(22, 45, 0) && currentTime <= new TimeSpan(23, 30, 0))
-                        {
-                            Console.WriteLine("Tüm hisseler satışa çıkarıldığı için alım işlemleri kapatılmıştr.");
-                            return new ErrorResult("Tüm hisseler satışa çıkarıldığı için alım işlemleri kapatılmıştr.");
-                        }
-                        else
-                        {
-                            var orderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
+                       var orderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
                             {
                                 Symbol = signal.Symbol,
                                 Qty = signal.Quantity,
                                 Side = "buy",
-                                Type = "market",
+                                Type = "trailing_stop",
                                 TimeInForce = "gtc",
-                                OrderClass = "bracket",
-                                StopLoss = new StopLoss
-                                {
-                                    StopPrice = calculatedStopPrice
-                                },
-                                TakeProfit = new TakeProfit
-                                {
-                                    LimitPrice = calculatedTakeProfitPrice
-                                }
+                                TrailPercent = 5M
                             });
 
-                            _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Yeni emir oluşturuldu: {signal.Action} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
-                            await _brokerLog.AddAsync(new BrokerLog
-                            {
-                                BrokerAccountId = signal.BrokerAccountId,
-                                Message = $"Yeni emir oluşturuldu: {signal.Action} işlemi başarıyla gerçekleştirildi. {signal.Symbol}",
-
-                            });
-
+                          
                             if (IsOrderSuccessful(orderRequest.Status))
                             {
                                 string actionType = signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) ? "BUY" : "SELL";
                                 await NotifyAndLog(signal, transactionId, $"{actionType} işlemi başarılı", $"Hisse {actionType} yapıldı: {signal.Symbol}, Miktar: {signal.Quantity}", actionType);
                                 Console.WriteLine($"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
-                                _alpacaService.AlpacaLog(signal.BrokerAccountId, $"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
+                                await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, signal.Quantity, $"{actionType} işlemi başarıyla gerçekleştirildi.");
                                 return new SuccessResult($"{actionType} işlemi başarıyla gerçekleştirildi.");
                             }
-                        }
                     }
 
                     else if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase))
@@ -265,21 +292,12 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                             OrderClass = "simple"
                         });
 
-                        _alpacaService.AlpacaLog(signal.BrokerAccountId, $"Yeni emir oluşturuldu: {signal.Action} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
-                        await _brokerLog.AddAsync(new BrokerLog
-                        {
-                            BrokerAccountId = signal.BrokerAccountId,
-                            Message = $"Yeni emir oluşturuldu: {signal.Action} işlemi başarıyla gerçekleştirildi. {signal.Symbol}",
-
-                        });
-
-
                         if (IsOrderSuccessful(orderResult.Status))
                         {
                             string actionType = signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) ? "BUY" : "SELL";
                             await NotifyAndLog(signal, transactionId, $"{actionType} işlemi başarılı", $"Hisse {actionType} yapıldı: {signal.Symbol}, Miktar: {signal.Quantity}", actionType);
                             Console.WriteLine($"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
-                            _alpacaService.AlpacaLog(signal.BrokerAccountId, $"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
+                            await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, signal.Quantity, $"{actionType} işlemi başarıyla gerçekleştirildi.");
                             return new SuccessResult($"{actionType} işlemi başarıyla gerçekleştirildi.");
                         }
                     }
@@ -294,13 +312,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
             }
             catch (Exception ex)
             {
-                _alpacaService.AlpacaLog(signal.BrokerAccountId, $"XXXX Yeni emir oluşturulamadı: {signal.Action} ({signal.Quantity} adet) -- {signal.Symbol} :: HATA: {ex.Message}");
-                await _brokerLog.AddAsync(new BrokerLog
-                {
-                    BrokerAccountId = signal.BrokerAccountId,
-                    Message = $"XXXX Yeni emir oluşturulamadı: {signal.Action} ({signal.Quantity} adet) -- {signal.Symbol} :: HATA: {ex.Message}",
-
-                });
+                await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, null, signal.Quantity, $"XXXX Yeni emir oluşturulamadı: {signal.Action} -- HATA: {ex.Message}");
                 Console.WriteLine($"TransactionId: {transactionId} - Hata: {ex.Message}");
                 return new ErrorResult($"Bir hata oluştu: {ex.Message}");
             }

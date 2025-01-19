@@ -48,4 +48,11 @@ public class OrderResponse
 
     [JsonPropertyName("error_message")]
     public string? ErrorMessage { get; set; }
+
+    [JsonPropertyName("filled_at")]
+    public DateTime? FilledAt { get; set; }
+
+    [JsonPropertyName("triggered_by")]
+    public string? TriggeredBy { get; set; }
+
 }

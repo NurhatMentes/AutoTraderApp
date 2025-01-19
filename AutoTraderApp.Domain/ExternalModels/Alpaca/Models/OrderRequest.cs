@@ -32,5 +32,8 @@ public class OrderRequest
     public TakeProfit? TakeProfit { get; set; } 
 
     [JsonPropertyName("stop_loss")]
-    public StopLoss? StopLoss { get; set; }     
+    public StopLoss? StopLoss { get; set; }
+
+    [JsonPropertyName("trail_percent")]
+    public decimal? TrailPercent { get; set; }
 }

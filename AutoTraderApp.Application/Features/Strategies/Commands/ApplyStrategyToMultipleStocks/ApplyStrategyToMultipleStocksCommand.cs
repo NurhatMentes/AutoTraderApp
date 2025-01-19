@@ -56,8 +56,6 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             var deleteAlertsResult = await _automationService.DeleteAllAlertsAsync();
             if (!deleteAlertsResult)
                 return new ErrorResult("TradingView alarmları temizlenemedi.");
-
-            // UpdateCombinedStockListCommand çalıştırılıyor
             var updateResult = await _mediator.Send(new UpdateCombinedStockListCommand());
             if (!updateResult)
             {
@@ -112,15 +110,14 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                     await Task.Delay(TimeSpan.FromSeconds(randomTime));
 
                     bool buyAlertSuccess = false;
-                    bool sellAlertSuccess = false;
 
-                    decimal price = Convert.ToDecimal(stock.Price.Value);
                     if (!buyAlertSuccess)
                     {
+                        buyAlertSuccess = true;
                         buyAlertSuccess = await _automationService.CreateAlertAsync(
-                            $"{stock.Symbol}/Buy/{strategy.StrategyName}",
+                            $"{stock.Symbol}/{strategy.StrategyName}",
                             strategy.WebhookUrl,
-                            "buy",
+                           "{{strategy.order.action}}",
                             stock.Symbol,
                             quantity,
                             request.BrokerAccountId,
@@ -128,6 +125,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
 
                         if (buyAlertSuccess)
                         {
+                            buyAlertSuccess = false;
                             await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Buy Alarm Oluşturma", "Başarılı", stock.Symbol, "Buy alarmı başarıyla oluşturuldu.");
                         }
                         else
@@ -136,30 +134,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                         }
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(3));
-
-                    if (!sellAlertSuccess)
-                    {
-                        sellAlertSuccess = await _automationService.CreateAlertAsync(
-                            $"{stock.Symbol}/Sell/{strategy.StrategyName}",
-                            strategy.WebhookUrl,
-                            "sell",
-                            stock.Symbol,
-                            quantity,
-                            request.BrokerAccountId,
-                            request.UserId);
-
-                        if (sellAlertSuccess)
-                        {
-                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Sell Alarm Oluşturma", "Başarılı", stock.Symbol, "Sell alarmı başarıyla oluşturuldu.");
-                        }
-                        else
-                        {
-                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Sell Alarm Oluşturma", "Hata", stock.Symbol, "Sell alarmı oluşturulamadı.");
-                        }
-                    }
-
-                    if (buyAlertSuccess && sellAlertSuccess)
+                    if (buyAlertSuccess)
                     {
                         await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturma", "Başarılı", stock.Symbol, "--->> Buy ve Sell alarmları başarıyla oluşturuldu.");
                     }

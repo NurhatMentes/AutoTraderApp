@@ -126,7 +126,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation.Playwrights
                 Console.WriteLine($"Sembol için grafik sayfasına yönlendirme: {symbol}");
                 await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
 
-                await Task.Delay(TimeSpan.FromSeconds(6));
+                await Task.Delay(TimeSpan.FromSeconds(randomTime));
 
                 // Pine Editor kontrolü ve açma
                 var pineEditorCheck = await _page.QuerySelectorAsync("button[aria-label='Close Pine Editor']");
@@ -155,7 +155,6 @@ namespace AutoTraderApp.Infrastructure.Services.Automation.Playwrights
                 // Textarea'nın tüm içeriğini silmek için 
                 textArea.focus();
                 
-                // Ctrl+A ile tüm içeriği seçme
                 const selectAllEvent = new KeyboardEvent('keydown', {
                     bubbles: true,
                     cancelable: true,
@@ -167,7 +166,6 @@ namespace AutoTraderApp.Infrastructure.Services.Automation.Playwrights
                 });
                 textArea.dispatchEvent(selectAllEvent);
 
-                // Delete tuşu ile içeriği silme
                 const deleteEvent = new KeyboardEvent('keydown', {
                     bubbles: true,
                     cancelable: true,
@@ -282,11 +280,13 @@ namespace AutoTraderApp.Infrastructure.Services.Automation.Playwrights
         public async Task<bool> CreateAlertAsync(string strategyName, string webhookUrl, string action, string symbol, int quantity, Guid brokerAccountId, Guid userId)
         {
             Console.WriteLine($"Sembol için grafik sayfasına yönlendirme: {symbol}");
-            await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");         
+            await _page.GotoAsync($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
+            const int maxRetries = 2;
+            int retryCount = 0;
 
             try
             {
-                int randomTime = new Random().Next(2, 8);
+                int randomTime = new Random().Next(2, 6);
                 await Task.Delay(TimeSpan.FromSeconds(randomTime));
                 Console.WriteLine($"{symbol} sembolü için alert butonu aranıyor...");
 
@@ -303,7 +303,7 @@ namespace AutoTraderApp.Infrastructure.Services.Automation.Playwrights
                     }
                 }
 
-                    await Task.Delay(TimeSpan.FromSeconds(3));
+                    await Task.Delay(TimeSpan.FromSeconds(4));
 
                     //// **Condition Alanını Güncelleme**
                     //Console.WriteLine("Condition alanı ayarlanıyor...");
@@ -346,10 +346,13 @@ namespace AutoTraderApp.Infrastructure.Services.Automation.Playwrights
                     //await everyTimeButton.ClickAsync();
 
                 // Alert adı ve diğer alanları doldurma
+
                 var alertNameInput = await _page.QuerySelectorAsync("#alert-name");
                 if (alertNameInput == null)
                     throw new Exception("Alert adı input'u bulunamadı.");
                 await alertNameInput.FillAsync(strategyName);
+
+                await Task.Delay(TimeSpan.FromSeconds(2));
 
                 // Expiration Ayarla (8 Saat Sonraya)
                 Console.WriteLine("Expiration tarihi ayarlanıyor...");
@@ -459,6 +462,28 @@ namespace AutoTraderApp.Infrastructure.Services.Automation.Playwrights
         }
 
 
+        private void RetryAction(Action action)
+        {
+            const int maxRetries = 2;
+            int retryCount = 0;
+
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    action();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    retryCount++;
+                    Console.WriteLine($"Retrying action. Attempt {retryCount}/{maxRetries}. Error: {ex.Message}");
+                    Thread.Sleep(1000);
+                    if (retryCount == maxRetries)
+                        throw;
+                }
+            }
+        }
 
         public void Dispose()
         {

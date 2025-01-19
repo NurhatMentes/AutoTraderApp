@@ -2,9 +2,6 @@
 
 namespace AutoTraderApp.Core.Utilities.Calculators
 {
-    /// <summary>
-    /// Kullanıcının hesap bakiyesi ve risk toleransına göre alım-satım miktarını hesaplar.
-    /// </summary>
     public static class QuantityCalculator
     {
         /// <summary>
@@ -19,13 +16,28 @@ namespace AutoTraderApp.Core.Utilities.Calculators
         {
             if (entryPrice <= stopLoss)
             {
-                new ErrorResult("Alış fiyatı, zararı durdurma fiyatından fazla olmalıdır.");
+                throw new ArgumentException("Alış fiyatı, zararı durdurma fiyatından fazla olmalıdır.");
             }
 
+            // Risk miktarını hesapla
             decimal riskAmount = accountValue * riskPercentage;
-            decimal perUnitRisk = entryPrice - stopLoss;         
-            int quantity = (int)(riskAmount / perUnitRisk);       
 
+            // Hisse başına risk miktarını hesapla
+            decimal perUnitRisk = entryPrice - stopLoss;
+
+            // Hesaplanan miktarı bul
+            int quantity = (int)(riskAmount / perUnitRisk);
+
+            // Toplam fiyatı hesapla
+            decimal totalPrice = quantity * entryPrice;
+
+            // Eğer toplam fiyat 2500 doların altındaysa, miktarı artır
+            if (totalPrice < 2500)
+            {
+                quantity = (int)Math.Ceiling(2500 / entryPrice);
+            }
+
+            // Miktar en az 1 olmalı
             return quantity > 0 ? quantity : 1;
         }
     }

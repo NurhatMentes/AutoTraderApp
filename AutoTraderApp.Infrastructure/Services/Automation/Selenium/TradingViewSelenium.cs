@@ -116,6 +116,7 @@ public class TradingViewSelenium : ITradingViewSeleniumService
                     alertNameInput.Clear();
                     alertNameInput.SendKeys(strategyName);
                     Console.WriteLine("Alert name set.");
+                    Thread.Sleep(2000);
                 });
 
                 // Expiration
@@ -126,6 +127,7 @@ public class TradingViewSelenium : ITradingViewSeleniumService
                     var expirationSet = _driver.FindElement(By.XPath("/html/body/div[5]/div[2]/div/div[2]/div/span/div[1]/div/div/div/button"));
                     expirationSet.Click();
                     Console.WriteLine("Expiration date set.");
+                    Thread.Sleep(2000);
                 });
 
                 // Alert Message
@@ -144,6 +146,7 @@ public class TradingViewSelenium : ITradingViewSeleniumService
   ""userId"": ""{userId}""
 }}");
                     Console.WriteLine("Alert message set.");
+                    Thread.Sleep(2000);
                 });
 
                 // Notifications Tab
@@ -177,6 +180,7 @@ public class TradingViewSelenium : ITradingViewSeleniumService
                 // Create Button
                 RetryAction(() =>
                 {
+                    Thread.Sleep(1000);
                     var createButton = _driver.FindElement(By.XPath("/html/body/div[5]/div[2]/div/div[1]/form/div[2]/div/div/button[2]"));
                     createButton.Click();
                     Console.WriteLine("Alert created successfully.");

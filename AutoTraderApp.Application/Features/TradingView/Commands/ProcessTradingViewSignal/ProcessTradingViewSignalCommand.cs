@@ -257,9 +257,8 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                             TimeInForce = "gtc"
                         });
 
-                        // 2. Alım emri gerçekleştikten sonra trailing stop emri verin
-                        // Bunun için alım emrinin tamamlanmasını beklemeniz gerekir
-                        await Task.Delay(3000); // Emrin gerçekleşmesi için kısa bir bekleme
+
+                        await Task.Delay(3000); 
 
                         // 3. Trailing stop emrini verin
                         var trailingStopRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest

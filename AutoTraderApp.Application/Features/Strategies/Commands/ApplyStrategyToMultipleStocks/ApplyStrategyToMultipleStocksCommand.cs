@@ -9,6 +9,7 @@ using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
+using System.Runtime.Intrinsics.X86;
 
 namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyToMultipleStocks
 {
@@ -30,6 +31,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         private readonly IAlphaVantageService _alphaVantageService;
         private readonly IMediator _mediator;
         private readonly IBaseRepository<NasdaqStock> _nasdaqStockRepository;
+        private readonly IBaseRepository<CustomStock> _customStockRepository;
 
         public ApplyStrategyToMultipleStocksCommandHandler(
             IBaseRepository<Strategy> strategyRepository,
@@ -40,7 +42,8 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             IBaseRepository<CombinedStock> combinedStockRepository,
             IAlphaVantageService alphaVantageService,
             IMediator mediator,
-             IBaseRepository<NasdaqStock> nasdaqStockRepository)
+             IBaseRepository<NasdaqStock> nasdaqStockRepository,
+             IBaseRepository<CustomStock> customStockRepository)
         {
             _strategyRepository = strategyRepository;
             _automationService = automationService;
@@ -51,6 +54,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             _alphaVantageService = alphaVantageService;
             _mediator = mediator;
             _nasdaqStockRepository = nasdaqStockRepository;
+            _customStockRepository = customStockRepository;
         }
 
         public async Task<IResult> Handle(ApplyStrategyToMultipleStocksCommand request, CancellationToken cancellationToken)
@@ -60,6 +64,9 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             var deleteAlertsResult = await _automationService.DeleteAllAlertsAsync();
             if (!deleteAlertsResult)
                 return new ErrorResult("TradingView alarmları temizlenemedi.");
+
+            //**********// Hisse listeleri güncelleniyor && çağırılıyor//**********//
+
             var updateResult = await _mediator.Send(new UpdateCombinedStockListCommand());
             if (!updateResult)
             {
@@ -84,6 +91,17 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                 return new ErrorResult("Nasdaq hisse listesi bulunamadı.");
             }
 
+            var customStocks = _customStockRepository.GetAllAsync().Result;
+            if (customStocks == null)
+            {
+                return new ErrorResult("Nasdaq hisse listesi bulunamadı.");
+            }
+            //**********//
+
+
+
+            //**********//Kontroller//**********//
+
             // Strateji bilgisi
             var strategy = await _strategyRepository.GetAsync(s => s.Id == request.StrategyId);
             if (strategy == null)
@@ -101,17 +119,10 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
 
             decimal accountValue = account.Equity;
             Console.WriteLine($"---------------Hesap değeri: {accountValue}");
+            //**********//
 
 
-
-            decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountValue);
-            //var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
-            //Console.WriteLine($"---------------Risk yüzdesi: {riskPercentage}");
-
-            //foreach (var selectedStock in selectedStocks)
-            //{
-            //    Console.WriteLine($"---------------Seçilen hisseler: {selectedStock.Symbol} --- ");
-            //}
+            //**********//Alert Oluşturma//**********//
 
             foreach (var stock in nasdaqStocks)
             {

@@ -31,6 +31,7 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<TelegramBotConfig> TelegramBotConfigs { get; set; }
         public DbSet<BrokerLog> BrokerLogs { get; set; }
         public DbSet<NasdaqStock> NasdaqStocks { get; set; }
+        public DbSet<CustomStock> CustomStocks { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

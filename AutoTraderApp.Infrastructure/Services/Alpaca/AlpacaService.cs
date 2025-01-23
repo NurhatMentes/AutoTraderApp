@@ -155,7 +155,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                     Symbol=orderResponse.Symbol,
                     Price = Convert.ToDecimal(orderResponse.LimitPrice),
                     Quantity = Convert.ToInt16(orderResponse.Quantity),
-                    Message = $"Yeni emir oluşturuldu"
+                    Message = $"Yeni emir oluşturuldu: {orderRequest.Side}"
 
                 });
 

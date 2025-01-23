@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
+using AutoTraderApp.Domain.ExternalModels.AlphaVantage;
 using AutoTraderApp.Infrastructure.Interfaces;
 using AutoTraderApp.Infrastructure.Services.Alpaca;
 using MediatR;
@@ -104,6 +105,47 @@ namespace AutoTraderApp.WebAPI.Controllers
         {
             var actives = await _marketDataService.GetMostActiveAsync();
             return Ok(actives);
+        }
+
+        [HttpGet("alphaVantage/nasdaq-listings")]
+        public async Task<IActionResult> GetNasdaqListings([FromQuery] int? limit = null)
+        {
+            try
+            {
+                var listings = await _marketDataService.GetNasdaqListingsAsync(limit);
+                return Ok(new SuccessDataResult<List<StockListingDto>>(
+                    listings,
+                    limit.HasValue
+                        ? $"İlk {limit} NASDAQ hissesi listelendi"
+                        : "Tüm NASDAQ hisseleri listelendi"
+                ));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ErrorResult(ex.Message));
+            }
+        }
+
+        [HttpGet("alphaVantage/nasdaq-listings/{count}")]
+        public async Task<IActionResult> GetLimitedNasdaqListings(int count)
+        {
+            if (count <= 0 || count > 1000)
+            {
+                return BadRequest(new ErrorResult("Hisse sayısı 1 ile 1000 arasında olmalıdır."));
+            }
+
+            try
+            {
+                var listings = await _marketDataService.GetNasdaqListingsAsync(count);
+                return Ok(new SuccessDataResult<List<StockListingDto>>(
+                    listings,
+                    $"NASDAQ'tan {count} hisse listelendi"
+                ));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ErrorResult(ex.Message));
+            }
         }
     }
 }

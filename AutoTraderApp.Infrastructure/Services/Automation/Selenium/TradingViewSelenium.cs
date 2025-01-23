@@ -95,9 +95,11 @@ public class TradingViewSelenium : ITradingViewSeleniumService
 
         while (retryCount < maxRetries)
         {
-            try
-            {
-                Console.WriteLine($"Navigating to chart page for symbol: {symbol}");
+            try { 
+
+
+                Thread.Sleep(4000);
+                 Console.WriteLine($"Navigating to chart page for symbol: {symbol}");
                 _driver.Navigate().GoToUrl($"https://www.tradingview.com/chart/?symbol=NASDAQ%3A{symbol}");
                 Thread.Sleep(6000);
 
@@ -110,14 +112,14 @@ public class TradingViewSelenium : ITradingViewSeleniumService
                 });
 
                 // Alert Name
-                RetryAction(() =>
-                {
-                    var alertNameInput = _driver.FindElement(By.Id("alert-name"));
-                    alertNameInput.Clear();
-                    alertNameInput.SendKeys(strategyName);
-                    Console.WriteLine("Alert name set.");
-                    Thread.Sleep(2000);
-                });
+                //RetryAction(() =>
+                //{
+                //    var alertNameInput = _driver.FindElement(By.Id("alert-name"));
+                //    alertNameInput.Clear();
+                //    alertNameInput.SendKeys(strategyName);
+                //    Console.WriteLine("Alert name set.");
+                //    Thread.Sleep(4000);
+                //});
 
                 // Expiration
                 RetryAction(() =>
@@ -127,7 +129,7 @@ public class TradingViewSelenium : ITradingViewSeleniumService
                     var expirationSet = _driver.FindElement(By.XPath("/html/body/div[5]/div[2]/div/div[2]/div/span/div[1]/div/div/div/button"));
                     expirationSet.Click();
                     Console.WriteLine("Expiration date set.");
-                    Thread.Sleep(2000);
+                    Thread.Sleep(4000);
                 });
 
                 // Alert Message
@@ -146,7 +148,7 @@ public class TradingViewSelenium : ITradingViewSeleniumService
   ""userId"": ""{userId}""
 }}");
                     Console.WriteLine("Alert message set.");
-                    Thread.Sleep(2000);
+                    Thread.Sleep(4000);
                 });
 
                 // Notifications Tab

@@ -1,4 +1,5 @@
 ﻿using AutoTraderApp.Application.Features.CombinedStocks.Commands;
+using AutoTraderApp.Application.Features.NasdaqStocks.Commands;
 using AutoTraderApp.Application.Features.Strategies.Helpers;
 using AutoTraderApp.Core.Utilities.Calculators;
 using AutoTraderApp.Core.Utilities.Generator;
@@ -29,6 +30,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         private readonly IAlphaVantageService _alphaVantageService;
         private readonly IMediator _mediator;
         private readonly ITradingViewSeleniumService _tradingViewSeleniumService;
+        private readonly IBaseRepository<NasdaqStock> _nasdaqStockRepository;
 
         public ApplyStrategyToMultipleStocksSyncCommandHandler(
             IBaseRepository<Strategy> strategyRepository,
@@ -39,7 +41,8 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             IBaseRepository<CombinedStock> combinedStockRepository,
             IAlphaVantageService alphaVantageService,
             IMediator mediator,
-            ITradingViewSeleniumService tradingViewSeleniumService)
+            ITradingViewSeleniumService tradingViewSeleniumService,
+            IBaseRepository<NasdaqStock> nasdaqStockRepository)
         {
             _strategyRepository = strategyRepository;
             _automationService = automationService;
@@ -50,6 +53,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             _alphaVantageService = alphaVantageService;
             _mediator = mediator;
             _tradingViewSeleniumService = tradingViewSeleniumService;
+            _nasdaqStockRepository = nasdaqStockRepository;
         }
 
         public Task<IResult> Handle(ApplyStrategyToMultipleStocksSyncCommand request, CancellationToken cancellationToken)
@@ -86,6 +90,19 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                 return new ErrorResult("Birleşik hisse listesi bulunamadı.");
             }
 
+            //var updateNasdaq = _mediator.Send(new UpdateNasdaqStocksCommand()).Result;
+            //if (!updateNasdaq)
+            //{
+            //    return new ErrorResult($"Nasdaq hisse listesi güncellenemedi");
+            //}
+
+            //var nasdaqStocks = _nasdaqStockRepository.GetAllAsync().Result
+            var nasdaqStocks = _alphaVantageService.GetNasdaqListingsAsync(500).Result;
+            if (nasdaqStocks == null)
+            {
+                return new ErrorResult("Nasdaq hisse listesi bulunamadı.");
+            }
+
             // Strateji bilgisi
             var strategy = _strategyRepository.GetAsync(s => s.Id == request.StrategyId).Result;
             if (strategy == null)
@@ -108,14 +125,14 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
             Console.WriteLine($"---------------Risk yüzdesi: {riskPercentage}");
 
-            foreach (var stock in selectedStocks)
+            foreach (var stock in nasdaqStocks)
             {
                 Console.WriteLine($"---------------Seçilen hisse: {stock.Symbol}");
 
                 try
                 {
-                    int quantity = QuantityCalculator.CalculateQuantity(accountValue, riskPercentage, stock.Price ?? 0, stock.Price.Value * 0.95m);
-                    string script = StrategyScriptGenerator.GenerateScript(strategy, quantity, stock.Symbol);
+                    //int quantity = QuantityCalculator.CalculateQuantity(accountValue, riskPercentage, stock.Price ?? 0, stock.Price.Value * 0.95m);
+                    //string script = StrategyScriptGenerator.GenerateScript(strategy, quantity, stock.Symbol);
 
                     var symbol = stock.Symbol;
 
@@ -125,7 +142,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                         strategy.WebhookUrl,
                         "{{strategy.order.action}}",
                         stock.Symbol,
-                        quantity,
+                        10,
                         request.BrokerAccountId,
                         request.UserId);
 

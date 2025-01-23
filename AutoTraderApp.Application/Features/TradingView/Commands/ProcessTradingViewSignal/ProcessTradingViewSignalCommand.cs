@@ -58,12 +58,6 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 if (brokerAccount == null)
                     return new ErrorResult("Geçerli bir broker hesabı bulunamadı.");
 
-                var combinedStocks = await _combinedStockRepository.GetAllAsync();
-                if (combinedStocks == null || !combinedStocks.Any())
-                {
-                    return new ErrorResult("Birleşik hisse listesi bulunamadı.");
-                }
-
                 // ABD borsa saatleri kontrolü (Türkiye saatine göre)
                 var nowTurkeyTime = DateTime.UtcNow.AddHours(3);
                 var marketOpen = new TimeSpan(17, 30, 0);
@@ -184,7 +178,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 }
 
                 // Mevcut pozisyon miktarını kontrol et
-                if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase) && Convert.ToInt32(position.AvailableQuantity) == 0)
+                if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase) && Convert.ToInt32(position.Quantity) == 0)
                 {
                     await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, null, $"Satılacak pozisyon bulunamadı");
                     Console.WriteLine($"Satılacak pozisyon bulunamadı ({signal.Action}): {signal.Symbol}");
@@ -213,7 +207,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
                 await ExecuteWithRetry(async () =>
                 {
-                    var basePrice = Convert.ToDecimal(price);
+                    //var basePrice = Convert.ToDecimal(price);
 
                     //*********Bracket emir türü
 
@@ -254,18 +248,32 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
                     if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
                     {
-                       var orderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
-                            {
-                                Symbol = signal.Symbol,
-                                Qty = signal.Quantity,
-                                Side = "buy",
-                                Type = "trailing_stop",
-                                TimeInForce = "gtc",
-                                TrailPercent = 5M
-                            });
+                        var orderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
+                        {
+                            Symbol = signal.Symbol,
+                            Qty = signal.Quantity,
+                            Side = "buy",
+                            Type = "market",  
+                            TimeInForce = "gtc"
+                        });
 
-                          
-                            if (IsOrderSuccessful(orderRequest.Status))
+                        // 2. Alım emri gerçekleştikten sonra trailing stop emri verin
+                        // Bunun için alım emrinin tamamlanmasını beklemeniz gerekir
+                        await Task.Delay(3000); // Emrin gerçekleşmesi için kısa bir bekleme
+
+                        // 3. Trailing stop emrini verin
+                        var trailingStopRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
+                        {
+                            Symbol = signal.Symbol,
+                            Qty = signal.Quantity,
+                            Side = "sell",   
+                            Type = "trailing_stop",
+                            TimeInForce = "gtc",
+                            TrailPercent = 5M  
+                        });
+
+
+                        if (IsOrderSuccessful(orderRequest.Status))
                             {
                                 string actionType = signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) ? "BUY" : "SELL";
                                 await NotifyAndLog(signal, transactionId, $"{actionType} işlemi başarılı", $"Hisse {actionType} yapıldı: {signal.Symbol}, Miktar: {signal.Quantity}", actionType);
@@ -288,8 +296,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                             Qty = signal.Quantity,
                             Side = "sell",
                             Type = "market",
-                            TimeInForce = "gtc",
-                            OrderClass = "simple"
+                            TimeInForce = "gtc"
                         });
 
                         if (IsOrderSuccessful(orderResult.Status))

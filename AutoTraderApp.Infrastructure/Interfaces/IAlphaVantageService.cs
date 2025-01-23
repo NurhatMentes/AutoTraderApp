@@ -11,6 +11,6 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         Task<List<GainerDto>> GetTopGainersAsync();
         Task<List<LoserDto>> GetTopLosersAsync();
         Task<List<ActiveStockDto>> GetMostActiveAsync();
-
+        Task<List<StockListingDto>> GetNasdaqListingsAsync(int? limit = null);
     }
 }

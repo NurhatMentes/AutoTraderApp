@@ -30,7 +30,7 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<TelegramUser> TelegramUsers { get; set; }
         public DbSet<TelegramBotConfig> TelegramBotConfigs { get; set; }
         public DbSet<BrokerLog> BrokerLogs { get; set; }
-
+        public DbSet<NasdaqStock> NasdaqStocks { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

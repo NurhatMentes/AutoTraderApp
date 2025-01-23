@@ -1,4 +1,5 @@
 ﻿using AutoTraderApp.Application.Features.CombinedStocks.Commands;
+using AutoTraderApp.Application.Features.NasdaqStocks.Commands;
 using AutoTraderApp.Application.Features.Strategies.Helpers;
 using AutoTraderApp.Core.Utilities.Calculators;
 using AutoTraderApp.Core.Utilities.Generator;
@@ -28,6 +29,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         private readonly IBaseRepository<CombinedStock> _combinedStockRepository;
         private readonly IAlphaVantageService _alphaVantageService;
         private readonly IMediator _mediator;
+        private readonly IBaseRepository<NasdaqStock> _nasdaqStockRepository;
 
         public ApplyStrategyToMultipleStocksCommandHandler(
             IBaseRepository<Strategy> strategyRepository,
@@ -37,7 +39,8 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             TradingViewLogService logService,
             IBaseRepository<CombinedStock> combinedStockRepository,
             IAlphaVantageService alphaVantageService,
-            IMediator mediator)
+            IMediator mediator,
+             IBaseRepository<NasdaqStock> nasdaqStockRepository)
         {
             _strategyRepository = strategyRepository;
             _automationService = automationService;
@@ -47,6 +50,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             _combinedStockRepository = combinedStockRepository;
             _alphaVantageService = alphaVantageService;
             _mediator = mediator;
+            _nasdaqStockRepository = nasdaqStockRepository;
         }
 
         public async Task<IResult> Handle(ApplyStrategyToMultipleStocksCommand request, CancellationToken cancellationToken)
@@ -66,6 +70,18 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             if (combinedStocks == null || !combinedStocks.Any())
             {
                 return new ErrorResult("Birleşik hisse listesi bulunamadı.");
+            }
+
+            var updateNasdaq = _mediator.Send(new UpdateNasdaqStocksCommand()).Result;
+            if (!updateNasdaq)
+            {
+                return new ErrorResult($"Nasdaq hisse listesi güncellenemedi");
+            }
+
+            var nasdaqStocks = await _nasdaqStockRepository.GetAllAsync();
+            if (nasdaqStocks == null || !nasdaqStocks.Any())
+            {
+                return new ErrorResult("Nasdaq hisse listesi bulunamadı.");
             }
 
             // Strateji bilgisi
@@ -89,23 +105,23 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
 
 
             decimal riskPercentage = StockSelectionHelper.CalculateRiskPercentage(accountValue);
-            var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
-            Console.WriteLine($"---------------Risk yüzdesi: {riskPercentage}");
+            //var selectedStocks = StockSelectionHelper.SelectStocks(combinedStocks, accountValue);
+            //Console.WriteLine($"---------------Risk yüzdesi: {riskPercentage}");
 
-            foreach (var selectedStock in selectedStocks)
-            {
-                Console.WriteLine($"---------------Seçilen hisseler: {selectedStock.Symbol} --- ");
-            }
+            //foreach (var selectedStock in selectedStocks)
+            //{
+            //    Console.WriteLine($"---------------Seçilen hisseler: {selectedStock.Symbol} --- ");
+            //}
 
-            foreach (var stock in selectedStocks)
+            foreach (var stock in nasdaqStocks)
             {
                 int randomTime = new Random().Next(3, 11);
                 Console.WriteLine($"---------------Random Time (HANDLE): {randomTime}");
 
                 try
                 {
-                    int quantity = QuantityCalculator.CalculateQuantity(accountValue, riskPercentage, stock.Price ?? 0, stock.Price.Value * 0.95m);
-                    string script = StrategyScriptGenerator.GenerateScript(strategy, quantity, stock.Symbol);
+                    //int quantity = QuantityCalculator.CalculateQuantity(accountValue, riskPercentage, stock.Price ?? 0, stock.Price.Value * 0.95m);
+                    //string script = StrategyScriptGenerator.GenerateScript(strategy, quantity, stock.Symbol);
 
                     await Task.Delay(TimeSpan.FromSeconds(randomTime));
 
@@ -119,7 +135,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                             strategy.WebhookUrl,
                            "{{strategy.order.action}}",
                             stock.Symbol,
-                            quantity,
+                            10,
                             request.BrokerAccountId,
                             request.UserId);
 

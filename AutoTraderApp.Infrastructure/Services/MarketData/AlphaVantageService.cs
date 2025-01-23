@@ -268,4 +268,126 @@ public class AlphaVantageService : IAlphaVantageService
         }
     }
 
+    public async Task<List<StockListingDto>> GetNasdaqListingsAsync(int? limit = null)
+    {
+        var cacheKey = "nasdaq_listings";
+
+        if (_cacheManager.IsAdd(cacheKey))
+            return _cacheManager.Get<List<StockListingDto>>(cacheKey);
+
+        try
+        {
+            var url = $"query?function=LISTING_STATUS&apikey={_apiKey}";
+            var response = await _httpClient.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+
+            response.EnsureSuccessStatusCode();
+
+            // İlk birkaç satırı logla
+            using (var reader = new StringReader(content))
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    var line = reader.ReadLine();
+                    _logger.LogInformation($"Line {i}: {line}");
+                }
+            }
+
+            var listings = new List<StockListingDto>();
+            using (var reader = new StringReader(content))
+            {
+                // Header'ı oku
+                var headers = reader.ReadLine()?.Split(',');
+                if (headers == null)
+                {
+                    _logger.LogError("CSV headers could not be read");
+                    return new List<StockListingDto>();
+                }
+
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    // Her satırı çift tırnak durumunu da gözeterek parse et
+                    var values = ParseCsvLine(line);
+
+                    if (values.Length >= 7 &&
+                        values[2].Equals("NASDAQ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var listing = new StockListingDto
+                        {
+                            Symbol = values[0],
+                            Name = values[1],
+                            Exchange = values[2],
+                            AssetType = values[3],
+                            IpoDate = values[4],
+                            DelistingDate = values[5],
+                            Status = values[6]
+                        };
+
+                        // Sadece aktif olanları ekle
+                        if (values[6].Equals("Active", StringComparison.OrdinalIgnoreCase))
+                        {
+                            listings.Add(listing);
+                            _logger.LogDebug($"Added active listing: {listing.Symbol}");
+                        }
+                    }
+                }
+            }
+
+            _logger.LogInformation($"Total listings found: {listings.Count}");
+
+            var result = listings.OrderBy(l => l.Symbol).ToList();
+
+            if (limit.HasValue)
+            {
+                result = result.Take(limit.Value).ToList();
+            }
+
+            if (result.Any())
+            {
+                _cacheManager.Add(cacheKey, result, 240);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "NASDAQ hisse listesi alınamadı");
+            throw;
+        }
+    }
+
+    // CSV satırını düzgün parse etmek için yardımcı metod
+    private string[] ParseCsvLine(string line)
+    {
+        var result = new List<string>();
+        var currentValue = new System.Text.StringBuilder();
+        bool inQuotes = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '"')
+            {
+                inQuotes = !inQuotes;
+            }
+            else if (line[i] == ',' && !inQuotes)
+            {
+                result.Add(currentValue.ToString().Trim('"', ' '));
+                currentValue.Clear();
+            }
+            else
+            {
+                currentValue.Append(line[i]);
+            }
+        }
+
+        // Son değeri ekle
+        if (currentValue.Length > 0)
+        {
+            result.Add(currentValue.ToString().Trim('"', ' '));
+        }
+
+        return result.ToArray();
+    }
+
 }

@@ -60,7 +60,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
 
                 // ABD borsa saatleri kontrolü (Türkiye saatine göre)
                 var nowTurkeyTime = DateTime.UtcNow.AddHours(3);
-                var marketOpen = new TimeSpan(17, 30, 0);
+                var marketOpen = new TimeSpan(11, 30, 0);
                 var marketClose = new TimeSpan(23, 45, 0);
                 if (nowTurkeyTime.TimeOfDay < marketOpen || nowTurkeyTime.TimeOfDay > marketClose)
                     return new ErrorResult("Borsa saatleri dışında sinyal işlenemez.");
@@ -94,15 +94,15 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 Console.WriteLine($"Signal Total Value: {signalTotalCost}");
 
                 // Minimum toplam fiyat kontrolü
-                if (signalTotalCost < 2500)
+                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) && signalTotalCost < 2500)
                 {
-                    signal.Quantity = QuantityCalculator.CalculateQuantity(accountBuyingPower, riskPercentage, price, price * 0.95M); // %5 zarar durdurma ile minimum fiyat kontrolü
+                    signal.Quantity = QuantityCalculator.CalculateQuantity(accountBuyingPower, riskPercentage, price, price * 0.95M); 
                     signalTotalCost = signal.Quantity * price;
                     Console.WriteLine($"Toplam maliyet 2500 doların altındaydı, ayarlanan miktar: {signal.Quantity}");
                 }
 
                 // Buying Power kontrolü ve miktar ayarlaması
-                if (signalTotalCost > accountBuyingPower)
+                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) && signalTotalCost > accountBuyingPower)
                 {
                     int adjustedQuantity = (int)(accountBuyingPower / price);
                     Console.WriteLine($"Buying power limitini aşan sinyal: {signal.Symbol}. Orijinal Miktar: {signal.Quantity}, Ayarlanan Miktar: {adjustedQuantity}, Buying Power: {accountBuyingPower}");
@@ -121,7 +121,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                 }
 
                 // Risk limiti kontrolü ve miktar ayarlaması
-                if (signalTotalCost > riskLimit)
+                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) && signalTotalCost > riskLimit)
                 {
                     int adjustedQuantity = (int)Math.Floor(riskLimit / price);
                     signalTotalCost = adjustedQuantity * price;
@@ -134,18 +134,6 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                     }
 
                     Console.WriteLine($"Risk limitini aşan sinyal: {signal.Symbol}. Orijinal Miktar: {signal.Quantity}, Ayarlanan Miktar: {adjustedQuantity}, Risk Limiti: {riskLimit}");
-
-                    if (adjustedQuantity >= 1)
-                    {
-                        signal.Quantity = adjustedQuantity;
-                       // await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, adjustedQuantity, $"Risk limitini aşan sinyal. Risk Limiti: {riskLimit}. Yeni Miktar:{adjustedQuantity} ");
-                        Console.WriteLine($"Adjusted Quantity for Risk Limit: {adjustedQuantity}, New Signal Total Cost: {signalTotalCost}");
-                    }
-                    else
-                    {
-                        await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, adjustedQuantity, $"Risk limiti nedeniyle {signal.Symbol} için işlem gerçekleştirilemiyor. Risk Limiti: {riskLimit}, Fiyat: {price}");
-                        return new ErrorResult($"Risk limiti nedeniyle {signal.Symbol} için işlem gerçekleştirilemiyor. Risk Limiti: {riskLimit}, Fiyat: {price}");
-                    }
                 }
 
 
@@ -192,94 +180,54 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                         Console.WriteLine($"Mevcut pozisyonla aynı miktar olduğu için miktar 1 artırıldı. Yeni miktar: {signal.Quantity}");
                     }
                 }
-                if (signal.Action == "SELL" && Convert.ToDecimal(position.Quantity) < signal.Quantity)
+                if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase) && Convert.ToInt32(position.AvailableQuantity) < signal.Quantity)
                 {
                     Console.WriteLine($"Yetersiz miktar: Mevcut {position.AvailableQuantity}, Gerekli {signal.Quantity}");
-                    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, Convert.ToInt16(position.AvailableQuantity), $"Yetersiz miktar. Gerekli {signal.Quantity}");
+                    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, Convert.ToInt32(position.AvailableQuantity), $"Yetersiz miktar. Gerekli {signal.Quantity}");
 
-                    var sellQuantity = Math.Min(signal.Quantity, Convert.ToDecimal(position.AvailableQuantity));
+                    var sellQuantity = Math.Max(Convert.ToDecimal(position.Quantity), Convert.ToDecimal(position.AvailableQuantity));
                     signal.Quantity = Convert.ToInt32(sellQuantity);
                     Console.WriteLine($"Yeni satılacak miktat: {signal.Quantity}");
                 }
 
-
+                //İlgili hissenin açık buy emri varsa iptal et.
+                var openOrders = await _alpacaService.GetAllOrdersAsync(brokerAccount.Id);
+                foreach (var order in openOrders)
+                {
+                    if (order.Symbol == signal.Symbol && order.Side == "buy")
+                    {
+                        // Alım emrini iptal et
+                        await _alpacaService.CancelOrderAsync(order.OrderId, brokerAccount.Id);
+                        Console.WriteLine($"Alım emri iptal edildi: {order.OrderId}");
+                    }
+                }
 
 
                 await ExecuteWithRetry(async () =>
                 {
-                    //var basePrice = Convert.ToDecimal(price);
-
-                    //*********Bracket emir türü
-
-                    //var minIncrement = basePrice < 1.00M ? 0.0001M : 0.01M;
-
-                    //var calculatedStopPrice = basePrice - (basePrice * 5 / 100);
-                    //var calculatedTakeProfitPrice = basePrice * (1 + 5M / 100M);
-
-                    //calculatedStopPrice = Math.Floor(calculatedStopPrice / minIncrement) * minIncrement;
-                    //calculatedTakeProfitPrice = Math.Floor(calculatedTakeProfitPrice / minIncrement) * minIncrement;
-
-                    //if (calculatedStopPrice >= basePrice)
-                    //{
-                    //    calculatedStopPrice = basePrice - minIncrement;
-                    //}
-
-                    //if (calculatedTakeProfitPrice <= basePrice)
-                    //{
-                    //    calculatedTakeProfitPrice = basePrice + minIncrement;
-                    //}
-
-                    //if (calculatedTakeProfitPrice <= calculatedStopPrice)
-                    //{
-                    //    calculatedTakeProfitPrice = calculatedStopPrice + minIncrement;
-                    //}
-
-                    //if (calculatedStopPrice > basePrice - 0.01M)
-                    //{
-                    //    calculatedStopPrice = basePrice - 0.01M;
-                    //}
-
-                    //if (calculatedTakeProfitPrice < basePrice + 0.01M)
-                    //{
-                    //    calculatedTakeProfitPrice = basePrice + 0.01M;
-                    //}
-
-                    //Console.WriteLine($"calculatedStopPrice:{calculatedStopPrice} --- calculatedTakeProfitPrice:{calculatedTakeProfitPrice} --- basePrice:{basePrice}");
+                    var basePrice = Convert.ToDecimal(price);
+                    var minIncrement = basePrice < 1.00M ? 0.0001M : 0.01M;
 
                     if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
                     {
-                        var orderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
+                        var buyLimitPrice = basePrice * 0.98M; 
+                        var buyLimitPriceRounded = Math.Floor(buyLimitPrice / minIncrement) * minIncrement; 
+
+                        var buyOrderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
                         {
                             Symbol = signal.Symbol,
                             Qty = signal.Quantity,
                             Side = "buy",
-                            Type = "market",  
-                            TimeInForce = "gtc"
-                        });
-
-
-                        await Task.Delay(3000); 
-
-                        // 3. Trailing stop emrini verin
-                        var trailingStopRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest
-                        {
-                            Symbol = signal.Symbol,
-                            Qty = signal.Quantity,
-                            Side = "sell",   
-                            Type = "trailing_stop",
+                            Type = "limit",
                             TimeInForce = "gtc",
-                            TrailPercent = 5M  
+                            LimitPrice = buyLimitPriceRounded 
                         });
-
-
-                        if (IsOrderSuccessful(orderRequest.Status))
-                            {
-                                string actionType = signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) ? "BUY" : "SELL";
-                                await NotifyAndLog(signal, transactionId, $"{actionType} işlemi başarılı", $"Hisse {actionType} yapıldı: {signal.Symbol}, Miktar: {signal.Quantity}", actionType);
-                                Console.WriteLine($"{actionType} işlemi başarıyla gerçekleştirildi. {signal.Symbol}");
-                                await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, price, signal.Quantity, $"{actionType} işlemi başarıyla gerçekleştirildi.");
-                                return new SuccessResult($"{actionType} işlemi başarıyla gerçekleştirildi.");
-                            }
+                       
+                        // 3. Loglama ve bildirim
+                        string actionType = "BUY";
+                        await NotifyAndLog(signal, transactionId, $"{actionType} işlemi başarılı", $"Hisse {actionType} yapıldı: {signal.Symbol}, Miktar: {signal.Quantity}", actionType);
+                        await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, buyLimitPriceRounded, signal.Quantity, $"{actionType} işlemi için emir verildi..");
+                        return new SuccessResult($"{actionType} işlemi için emir verildi.");
                     }
 
                     else if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase))
@@ -287,6 +235,16 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.ProcessTrading
                         if (existingPosition == null || Convert.ToInt32(existingPosition.Quantity) <= 0)
                         {
                             return new ErrorResult($"Açık bir pozisyon bulunamadı: {signal.Symbol}");
+                        }
+
+                        var openOrders = await _alpacaService.GetAllOrdersAsync(brokerAccount.Id);
+                        foreach (var order in openOrders)
+                        {
+                            if (order.Symbol == signal.Symbol && order.Type == "trailing_stop")
+                            {
+                                await _alpacaService.CancelOrderAsync(order.OrderId, brokerAccount.Id);
+                                Console.WriteLine($"Trailing stop emri iptal edildi: {order.OrderId}");
+                            }
                         }
 
                         var orderResult = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest

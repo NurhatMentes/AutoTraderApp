@@ -24,5 +24,6 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         public Task<bool> AlpacaLog(Guid brokerAccountId, string symbol, decimal? price, int? quantity, string msg);
         Task<IResult> CloseAllPositionAsync(Guid brokerAccountId);
         Task<string> GenerateDailyTradeReportAsync(Guid brokerAccountId, DateTime tradeDate);
+        Task<IResult> ClosePositionAsync(Guid brokerAccountId, string symbol);
     }
 }

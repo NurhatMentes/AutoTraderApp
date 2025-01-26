@@ -4,6 +4,7 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -350,6 +351,32 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             }
         }
 
+        public async Task<IResult> ClosePositionAsync(Guid brokerAccountId, string symbol)
+        {
+          
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+
+            try
+            {
+                var response = await httpClient.DeleteAsync($"/v2/positions/{symbol}");
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
+                    return new ErrorResult($"Alpaca API hatası: {response.StatusCode} - {responseContent}");
+                }
+
+                Console.WriteLine("Pozisyon başarıyla kapatıldı");
+                return new SuccessResult("Bütün açık pozisyon başarıyla kapatıldı.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Pozisyonları kapatma sırasında hata oluştu: {ex.Message}");
+                return new ErrorResult($"Pozisyonları kapatma sırasında hata oluştu: {ex.Message}");
+            }
+        }
+
         public async Task<PositionResponse> GetPositionBySymbolAsync(string symbol, Guid brokerAccountId)
         {
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
@@ -576,15 +603,33 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             foreach (var group in orders.GroupBy(o => o.Symbol))
             {
                 var symbol = group.Key;
-                var buyOrders = group.Where(o => o.Side.Equals("buy", StringComparison.OrdinalIgnoreCase)).ToList();
-                var sellOrders = group.Where(o => o.Side.Equals("sell", StringComparison.OrdinalIgnoreCase)).ToList();
+                var buyOrders = group.Where(o => o.Side.Equals("buy", StringComparison.OrdinalIgnoreCase) && o.Status.Equals("filled", StringComparison.OrdinalIgnoreCase)).ToList();
+                var sellOrders = group.Where(o => o.Side.Equals("sell", StringComparison.OrdinalIgnoreCase) && o.Status.Equals("filled", StringComparison.OrdinalIgnoreCase)).ToList();
 
                 // Toplam Alım ve Satış Miktarları ve Maliyetleri
-                decimal totalBuyAmount = buyOrders.Sum(o => Convert.ToDecimal(o.FilledAvgPrice) * Convert.ToInt32(o.FilledQuantity));
-                decimal totalSellAmount = sellOrders.Sum(o => Convert.ToDecimal(o.FilledAvgPrice) * Convert.ToInt32(o.FilledQuantity));
+                decimal totalBuyAmount = 0;
+                decimal totalSellAmount = 0;
 
-                decimal totalBuyQuantity = buyOrders.Sum(o => Convert.ToInt16(o.FilledQuantity));
-                decimal totalSellQuantity = sellOrders.Sum(o => Convert.ToInt32(o.FilledQuantity));
+                foreach (var order in buyOrders)
+                {
+                    decimal filledQuantity = decimal.Parse(order.FilledQuantity);
+                    decimal filledAvgPrice = NormalizePrice(order.FilledAvgPrice);
+
+                    totalBuyAmount += filledQuantity * filledAvgPrice;
+                    Console.WriteLine($"Buy Order: Symbol={order.Symbol}, Quantity={filledQuantity:N2}, AvgPrice={filledAvgPrice:N2}, Amount={filledQuantity * filledAvgPrice:N2}");
+                }
+
+                foreach (var order in sellOrders)
+                {
+                    decimal filledQuantity = decimal.Parse(order.FilledQuantity);
+                    decimal filledAvgPrice = NormalizePrice(order.FilledAvgPrice);
+
+                    totalSellAmount += filledQuantity * filledAvgPrice;
+                    Console.WriteLine($"Sell Order: Symbol={order.Symbol}, Quantity={filledQuantity}, AvgPrice={filledAvgPrice}, Amount={filledQuantity * filledAvgPrice}");
+                }
+
+                decimal totalBuyQuantity = buyOrders.Sum(o => decimal.Parse(o.FilledQuantity));
+                decimal totalSellQuantity = sellOrders.Sum(o => decimal.Parse(o.FilledQuantity));
 
                 // Kar/Zarar Hesaplama
                 decimal pnl = totalSellAmount - totalBuyAmount;
@@ -615,7 +660,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             var mostProfitable = tradeDetails.OrderByDescending(t => t.PnLPercentage).FirstOrDefault();
             var mostLoss = tradeDetails.OrderBy(t => t.PnLPercentage).FirstOrDefault();
 
-            // Çıktı formatı
             var reportBuilder = new StringBuilder();
             reportBuilder.AppendLine("Her Hisse için Analiz");
             for (var i = 0; i < tradeDetails.Count; i++)
@@ -649,7 +693,20 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             return reportBuilder.ToString();
         }
 
+        decimal NormalizePrice(string price)
+        {
+            if (string.IsNullOrEmpty(price))
+                return 0m;
+            price = price.Replace(",", "").Replace(".", "");
 
-
+            if (decimal.TryParse(price, out decimal priceDecimal))
+            {
+                return priceDecimal / 100m;
+            }
+            else
+            {
+                return 0m;
+            }
+        }
     }
 }

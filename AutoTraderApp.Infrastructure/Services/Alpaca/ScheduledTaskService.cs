@@ -1,7 +1,9 @@
 ﻿using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
+using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.Transactions;
 
 
 namespace AutoTraderApp.Infrastructure.Services.Alpaca
@@ -10,11 +12,15 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
     {
         private Timer _timer;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IAlpacaService _alpacaService;
+        private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
 
-        public ScheduledTaskService(IServiceProvider serviceProvider)
+        public ScheduledTaskService(IServiceProvider serviceProvider, IAlpacaService alpacaService, IBaseRepository<BrokerAccount> brokerAccountRepository)
         {
             _serviceProvider = serviceProvider;
+            _alpacaService = alpacaService;
             StartScheduler();
+            _brokerAccountRepository = brokerAccountRepository;
         }
 
         private void StartScheduler()
@@ -25,6 +31,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 try
                 {
                     await ExecuteScheduledTaskAsync();
+                    await CheckAndPlaceSellOrdersAsync();
                 }
                 catch (Exception ex)
                 {
@@ -70,5 +77,93 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 }
             }
         }
+
+        private async Task CheckAndPlaceSellOrdersAsync()
+        {
+            using (var scope = _serviceProvider.CreateScope())
+            {
+                var brokerAccounts = await _brokerAccountRepository.GetAllAsync();
+
+                foreach (var brokerAccount in brokerAccounts)
+                {
+                    try
+                    {
+                        var openOrders = await _alpacaService.GetAllOrdersAsync(brokerAccount.Id);
+
+                        foreach (var order in openOrders)
+                        {
+                            if (order.Side == "buy" && order.Status == "filled")
+                            {
+                                var buyPrice = Convert.ToDecimal(order.FilledAvgPrice);
+                                await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, buyPrice, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} satın alındı.");
+
+                                var takeSellPrice = buyPrice * 1.02M; 
+                                var takeSellPriceRounded = Math.Floor(takeSellPrice / 0.01M) * 0.01M;
+
+                                var stopSellPrice = buyPrice * 0.98M;
+                                var stopSellPriceRounded = Math.Floor(takeSellPrice / 0.01M) * 0.01M;
+
+
+                                var takeSellOrderRequest = new OrderRequest
+                                {
+                                    Symbol = order.Symbol,
+                                    Qty = Convert.ToInt32(order.FilledQuantity),
+                                    Side = "sell",
+                                    Type = "limit",
+                                    TimeInForce = "gtc",
+                                    LimitPrice = takeSellPriceRounded
+                                };
+                                var takeSellOrderResponse = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, takeSellOrderRequest);
+
+                                await Task.Delay(2000);
+
+                                var stopSellOrderRequest = new OrderRequest
+                                {
+                                    Symbol = order.Symbol,
+                                    Qty = Convert.ToInt32(order.FilledQuantity),
+                                    Side = "sell",
+                                    Type = "stop",
+                                    TimeInForce = "gtc",
+                                    LimitPrice = stopSellPriceRounded
+                                };
+                                var stopSellOrderResponse = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, stopSellOrderRequest);
+
+
+                                if (takeSellOrderResponse.Status == "accepted")
+                                {
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} hissesi için {takeSellPriceRounded} kar satış emri verildi.");
+                                }
+
+                                await Task.Delay(2000);
+
+                                if (takeSellOrderResponse.Status == "filled")
+                                {
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} satışı gerçekleşti.");
+                                }
+
+                                if (stopSellOrderResponse.Status == "accepted")
+                                {
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} hissesi için {stopSellPriceRounded} zarar satış emri verildi.");
+                                }
+
+                                await Task.Delay(2000);
+
+                                if (stopSellOrderResponse.Status == "filled")
+                                {
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} satışı gerçekleşti.");
+                                }
+
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Hata oluştu: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                        await _alpacaService.AlpacaLog(brokerAccount.Id,"-", null, null, $"Hata oluştu: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                    }
+                }
+            }
+        }
     }
 }
+                                                

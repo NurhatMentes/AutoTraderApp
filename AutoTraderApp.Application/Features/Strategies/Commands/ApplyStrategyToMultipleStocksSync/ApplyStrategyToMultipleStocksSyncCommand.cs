@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Application.Features.CombinedStocks.Commands;
 using AutoTraderApp.Application.Features.Strategies.Helpers;
+using AutoTraderApp.Core.Constants;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Core.Utilities.Services;
@@ -65,7 +66,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             }
             catch (Exception ex)
             {
-                return Task.FromResult<IResult>(new ErrorResult($"Bir hata oluştu: {ex.Message}"));
+                return Task.FromResult<IResult>(new ErrorResult($"{Messages.General.SystemError}: {ex.Message}"));
             }
         }
 
@@ -75,69 +76,56 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             Console.WriteLine("Tüm TradingView alarmları temizleniyor...");
             var deleteAlertsResult = _automationService.DeleteAllAlertsAsync().Result;
             if (!deleteAlertsResult)
-                return new ErrorResult("TradingView alarmları temizlenemedi.");
-
+                return new ErrorResult(Messages.Alert.Deleted);
 
             //**********//Hisse listeleri güncelleniyor && çağırılıyor//**********//
- 
+
             // UpdateCombinedStockListCommand çalıştırılıyor
             var updateResult = _mediator.Send(new UpdateCombinedStockListCommand()).Result;
             if (!updateResult)
             {
-                return new ErrorResult($"Birleşik hisse güncellenemedi");
+                return new ErrorResult(Messages.General.Updated);
             }
 
             var combinedStocks = _combinedStockRepository.GetAllAsync().Result;
             if (combinedStocks == null || !combinedStocks.Any())
             {
-                return new ErrorResult("Birleşik hisse listesi bulunamadı.");
+                return new ErrorResult(Messages.General.DataNotFound);
             }
 
-            //var updateNasdaq = _mediator.Send(new UpdateNasdaqStocksCommand()).Result;
-            //if (!updateNasdaq)
-            //{
-            //    return new ErrorResult($"Nasdaq hisse listesi güncellenemedi");
-            //}
-
-            //var nasdaqStocks = _nasdaqStockRepository.GetAllAsync().Result
             var nasdaqStocks = _alphaVantageService.GetNasdaqListingsAsync(500).Result;
             if (nasdaqStocks == null)
             {
-                return new ErrorResult("Nasdaq hisse listesi bulunamadı.");
+                return new ErrorResult(Messages.General.DataNotFound);
             }
 
             var customStocks = _customStockRepository.GetAllAsync().Result;
             if (customStocks == null)
             {
-                return new ErrorResult("Nasdaq hisse listesi bulunamadı.");
+                return new ErrorResult(Messages.General.DataNotFound);
             }
             //**********//
-
-
 
             //**********//Kontroller//**********//
 
             // Strateji bilgisi
             var strategy = _strategyRepository.GetAsync(s => s.Id == request.StrategyId).Result;
             if (strategy == null)
-                return new ErrorResult("Strateji bulunamadı.");
+                return new ErrorResult(Messages.Strategy.NotFound);
 
             // Broker hesabı doğrulaması
             var brokerAccount = _brokerAccountRepository.GetAsync(b => b.Id == request.BrokerAccountId && b.UserId == request.UserId).Result;
             if (brokerAccount == null)
-                return new ErrorResult("Geçerli bir broker hesabı bulunamadı.");
+                return new ErrorResult(Messages.BrokerAccount.NotFound);
 
             // Alpaca hesabı doğrulaması
             var account = _alpacaService.GetAccountInfoAsync(brokerAccount.Id).Result;
             if (account == null)
-                return new ErrorResult("Kullanıcı hesabı bilgileri alınamadı.");
+                return new ErrorResult(Messages.Trading.AccountInfoNotFound);
             //**********//
-
-
 
             decimal accountValue = account.Equity;
             Console.WriteLine($"---------------Hesap değeri: {accountValue}");
-
 
             //**********//Alert Oluşturma//**********//
 
@@ -162,27 +150,21 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                     if (buyAlertSuccess)
                     {
                         Console.WriteLine($"Buy Alert Successfully Created for {stock.Symbol}");
+                        _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturma", Messages.General.Success, stock.Symbol, "Buy ve Sell alarmları başarıyla oluşturuldu.").Wait();
                     }
                     else
                     {
                         Console.WriteLine($"Failed to Create Buy Alert for {stock.Symbol}");
-                    }
-
-
-                    if (buyAlertSuccess)
-                    {
-                        _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturma", "Başarılı", stock.Symbol, "Buy ve Sell alarmları başarıyla oluşturuldu.").Wait();
+                        _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturma", Messages.General.Error, stock.Symbol, "Buy alarmı oluşturulamadı.").Wait();
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Çoklu Strateji Oluşturma", "Hata", stock.Symbol, $"Hata: {ex.Message}").Wait();
+                    _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Çoklu Strateji Oluşturma", Messages.General.Error, stock.Symbol, $"{Messages.General.SystemError}: {ex.Message}").Wait();
                 }
             }
 
-            return new SuccessResult("Strateji belirtilen hisselere başarıyla uygulandı.");
+            return new SuccessResult(Messages.Strategy.Created);
         }
-
-
     }
 }

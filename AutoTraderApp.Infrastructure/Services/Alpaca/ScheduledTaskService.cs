@@ -1,4 +1,5 @@
-﻿using AutoTraderApp.Core.Utilities.Repositories;
+﻿using AutoTraderApp.Core.Constants;
+using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
@@ -19,8 +20,8 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
         {
             _serviceProvider = serviceProvider;
             _alpacaService = alpacaService;
-            StartScheduler();
             _brokerAccountRepository = brokerAccountRepository;
+            StartScheduler();
         }
 
         private void StartScheduler()
@@ -35,11 +36,10 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"ScheduledTaskService hata aldı: {ex.Message}");
+                    Console.WriteLine($"{Messages.General.SystemError}: {ex.Message}");
                 }
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
         }
-
 
         private async Task ExecuteScheduledTaskAsync()
         {
@@ -67,11 +67,12 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                         try
                         {
                             await alpacaService.SellAllPositionsAtEndOfDayAsync(brokerAccount.Id);
-                            Console.WriteLine($"BrokerAccountId: {brokerAccount.Id} için işlem tamamlandı.");
+                            Console.WriteLine($"{Messages.Trading.OrderSuccess} - BrokerAccountId: {brokerAccount.Id}");
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Hata oluştu: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                            Console.WriteLine($"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                            await _alpacaService.AlpacaLog(brokerAccount.Id, "-",null, null, null, $"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
                         }
                     }
                 }
@@ -92,17 +93,16 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
                         foreach (var order in openOrders)
                         {
-                            if (order.Side == "buy" && order.Status == "filled")
+                            if (order.Side.Equals("BUY", StringComparison.OrdinalIgnoreCase) && order.Status == "filled")
                             {
                                 var buyPrice = Convert.ToDecimal(order.FilledAvgPrice);
-                                await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, buyPrice, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} satın alındı.");
+                                await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "BUY", buyPrice, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.OrderExecuted}");
 
-                                var takeSellPrice = buyPrice * 1.02M; 
+                                var takeSellPrice = buyPrice * 1.02M;
                                 var takeSellPriceRounded = Math.Floor(takeSellPrice / 0.01M) * 0.01M;
 
                                 var stopSellPrice = buyPrice * 0.98M;
                                 var stopSellPriceRounded = Math.Floor(takeSellPrice / 0.01M) * 0.01M;
-
 
                                 var takeSellOrderRequest = new OrderRequest
                                 {
@@ -128,38 +128,36 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                                 };
                                 var stopSellOrderResponse = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, stopSellOrderRequest);
 
-
                                 if (takeSellOrderResponse.Status == "accepted")
                                 {
-                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} hissesi için {takeSellPriceRounded} kar satış emri verildi.");
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL", takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.SellOrderPlaced} - {takeSellPriceRounded}");
                                 }
 
                                 await Task.Delay(2000);
 
                                 if (takeSellOrderResponse.Status == "filled")
                                 {
-                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} satışı gerçekleşti.");
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL", takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.OrderExecuted}");
                                 }
 
                                 if (stopSellOrderResponse.Status == "accepted")
                                 {
-                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} hissesi için {stopSellPriceRounded} zarar satış emri verildi.");
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL", takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.SellOrderPlaced} - {stopSellPriceRounded}");
                                 }
 
                                 await Task.Delay(2000);
 
                                 if (stopSellOrderResponse.Status == "filled")
                                 {
-                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} satışı gerçekleşti.");
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL", takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.OrderExecuted}");
                                 }
-
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Hata oluştu: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
-                        await _alpacaService.AlpacaLog(brokerAccount.Id,"-", null, null, $"Hata oluştu: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                        Console.WriteLine($"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                        await _alpacaService.AlpacaLog(brokerAccount.Id, "-",null, null, null, $"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
                     }
                 }
             }

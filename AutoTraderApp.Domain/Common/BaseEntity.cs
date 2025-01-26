@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,5 +14,8 @@ namespace AutoTraderApp.Domain.Common
         public DateTime? UpdatedAt { get; set; }
         public Guid CreatedByUserId { get; set; }
         public Guid? UpdatedByUserId { get; set; }
+
+        public string FormattedCreatedAt => CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", new CultureInfo("tr-TR"));
+        public string FormattedUpdatedAt => UpdatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm", new CultureInfo("tr-TR"));            
     }
 }

@@ -7,6 +7,8 @@ public class BrokerAccount : BaseEntity
 {
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
+    public string BrokerType { get; set; } = "Hisse"; 
+    public string BrokerName { get; set; } 
     public string Name { get; set; } 
     public string ApiKey { get; set; } 
     public string ApiSecret { get; set; } 

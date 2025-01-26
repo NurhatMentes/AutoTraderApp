@@ -1,9 +1,6 @@
-﻿using AutoTraderApp.Application.Features.TradingView.Commands.ProcessTradingViewSignal;
-using AutoTraderApp.Application.Features.TradingView.Commands.SendStrategy;
+﻿using AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradingViewSignal;
 using AutoTraderApp.Application.Features.TradingView.DTOs;
-using AutoTraderApp.Domain.ExternalModels.TradingView;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoTraderApp.WebAPI.Controllers
@@ -19,10 +16,10 @@ namespace AutoTraderApp.WebAPI.Controllers
             _mediator = mediator;
         }
 
-        [HttpPost("webhook")]
-        public async Task<IActionResult> ReceiveSignal([FromBody] TradingViewSignalDto signal)
+        [HttpPost("stock-webhook")]
+        public async Task<IActionResult> StockWebkook([FromBody] TradingViewSignalDto signal)
         {
-            var result = await _mediator.Send(new ProcessTradingViewSignalCommand { Signal = signal });
+            var result = await _mediator.Send(new StockProcessTradingViewSignalCommand { Signal = signal });
             if (result.Success)
                 return Ok(result);
 

@@ -4,6 +4,7 @@ using AutoTraderApp.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutoTraderApp.Persistence.Migrations
 {
     [DbContext(typeof(AutoTraderAppDbContext))]
-    partial class AutoTraderAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250126183417_AddUserTradingSettings")]
+    partial class AddUserTradingSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -909,9 +912,6 @@ namespace AutoTraderApp.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("RiskPercentage")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("SellPricePercentage")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")

@@ -184,7 +184,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
                 // Mevcut pozisyon miktarını kontrol et
                 if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase) && Convert.ToInt32(position.Quantity) == 0)
                 {
-                    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Action, signal.Symbol, price, null, Messages.Trading.NoPositionToSell);
+                    await _alpacaService.AlpacaLog(signal.BrokerAccountId, signal.Symbol, signal.Action, price, null, Messages.Trading.NoPositionToSell);
                     Console.WriteLine($"Satılacak pozisyon bulunamadı ({signal.Action}): {signal.Symbol}");
                     return new ErrorResult($"{signal.Symbol} {Messages.Trading.NoPositionToSell}");
                 }
@@ -212,9 +212,8 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
                 var openOrders = await _alpacaService.GetAllOrdersAsync(brokerAccount.Id);
                 foreach (var order in openOrders)
                 {
-                    if (order.Symbol == signal.Symbol && order.Side == "buy")
+                    if (order.Symbol == signal.Symbol && order.Side == "buy" && order.Status =="new")
                     {
-                        // Alım emrini iptal et
                         await _alpacaService.CancelOrderAsync(order.OrderId, brokerAccount.Id);
                         Console.WriteLine($"Alım emri iptal edildi: {order.OrderId}");
                     }
@@ -228,7 +227,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
 
                     if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
                     {
-                        var buyLimitPrice = basePrice * (userTradingSettings.BuyPricePercentage / 100m); // Yüzde değeri doğru hesaplanıyor
+                        var buyLimitPrice = basePrice * (1 + userTradingSettings.BuyPricePercentage / 100m);
                         var buyLimitPriceRounded = Math.Floor(buyLimitPrice / minIncrement) * minIncrement;
 
                         var buyOrderRequest = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, new OrderRequest

@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Core.Constants;
 using AutoTraderApp.Core.Utilities.Repositories;
+using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
@@ -15,22 +16,25 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
         private readonly IServiceProvider _serviceProvider;
         private readonly IAlpacaService _alpacaService;
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
+        private readonly IBaseRepository<UserTradingSetting> _userTradingSetting;
 
-        public ScheduledTaskService(IServiceProvider serviceProvider, IAlpacaService alpacaService, IBaseRepository<BrokerAccount> brokerAccountRepository)
+        public ScheduledTaskService(IServiceProvider serviceProvider, IAlpacaService alpacaService,
+            IBaseRepository<BrokerAccount> brokerAccountRepository, IBaseRepository<UserTradingSetting> userTradingSetting)
         {
             _serviceProvider = serviceProvider;
             _alpacaService = alpacaService;
             _brokerAccountRepository = brokerAccountRepository;
             StartScheduler();
+            _userTradingSetting = userTradingSetting;
         }
 
         private void StartScheduler()
         {
-            Console.WriteLine("ScheduledTaskService başlatıldı.");
             _timer = new Timer(async _ =>
             {
                 try
                 {
+                    Console.WriteLine("ScheduledTaskService başlatıldı.");
                     await ExecuteScheduledTaskAsync();
                     await CheckAndPlaceSellOrdersAsync();
                 }
@@ -72,7 +76,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                         catch (Exception ex)
                         {
                             Console.WriteLine($"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
-                            await _alpacaService.AlpacaLog(brokerAccount.Id, "-",null, null, null, $"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                            await _alpacaService.AlpacaLog(brokerAccount.Id, "-", null, null, null, $"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
                         }
                     }
                 }
@@ -90,78 +94,126 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                     try
                     {
                         var openOrders = await _alpacaService.GetAllOrdersAsync(brokerAccount.Id);
+                        var userTradingSettings = await _userTradingSetting.GetAsync(uts => uts.UserId == brokerAccount.UserId);
+                        if (userTradingSettings == null)
+                        {
+                            Console.WriteLine($"Kullanıcı ayarları bulunamadı - BrokerAccountId: {brokerAccount.Id}");
+                            continue;
+                        }
 
                         foreach (var order in openOrders)
                         {
-                            if (order.Side.Equals("BUY", StringComparison.OrdinalIgnoreCase) && order.Status == "filled")
+                            if (!order.Side.Equals("buy", StringComparison.OrdinalIgnoreCase) ||
+                                order.Status != "filled")
                             {
-                                var buyPrice = Convert.ToDecimal(order.FilledAvgPrice);
-                                await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "BUY", buyPrice, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.OrderExecuted}");
+                                continue;
+                            }
 
-                                var takeSellPrice = buyPrice * 1.02M;
-                                var takeSellPriceRounded = Math.Floor(takeSellPrice / 0.01M) * 0.01M;
+                            var existingSellOrders = openOrders.Where(o =>
+                                o.Symbol == order.Symbol &&
+                                o.Side.Equals("sell", StringComparison.OrdinalIgnoreCase) &&
+                                (o.Status == "new" || o.Status == "accepted" || o.Status == "partially_filled")).ToList();
 
-                                var stopSellPrice = buyPrice * 0.98M;
-                                var stopSellPriceRounded = Math.Floor(takeSellPrice / 0.01M) * 0.01M;
+                            if (existingSellOrders.Any())
+                            {
+                                Console.WriteLine($"Hisse için zaten aktif sell emirleri mevcut: {order.Symbol}");
+                                continue;
+                            }
 
-                                var takeSellOrderRequest = new OrderRequest
+                            // Mevcut pozisyonları kontrol et
+                            var openPositions = await _alpacaService.GetPositionsAsync(brokerAccount.Id);
+                            var existingPosition = openPositions.FirstOrDefault(p => p.Symbol == order.Symbol);
+
+                            if (existingPosition != null)
+                            {
+                                decimal buyPrice;
+                                try
+                                {
+                                    buyPrice = decimal.Parse(order.FilledAvgPrice,
+                                        System.Globalization.NumberStyles.Any,
+                                        System.Globalization.CultureInfo.InvariantCulture);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Fiyat dönüşüm hatası - Symbol: {order.Symbol}, " +
+                                        $"FilledAvgPrice: {order.FilledAvgPrice}, Hata: {ex.Message}");
+                                    continue;
+                                }
+
+                                await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "BUY",
+                                    buyPrice, Convert.ToInt32(order.FilledQuantity),
+                                    $"{order.Symbol} alım emri gerçekleşti, OCO emirleri oluşturuluyor");
+
+                                decimal takeProfitPrice = buyPrice * (1 + userTradingSettings.BuyPricePercentage / 100m);
+                                decimal takeProfitPriceRounded = Math.Floor(takeProfitPrice * 100) / 100;
+
+                                decimal stopLossPrice = buyPrice * (1 - userTradingSettings.BuyPricePercentage / 100m);
+                                decimal stopLossPriceRounded = Math.Floor(stopLossPrice * 100) / 100;
+
+                                // OCO (One-Cancels-Other) order oluştur
+                                var ocoOrder = new OrderRequest
                                 {
                                     Symbol = order.Symbol,
-                                    Qty = Convert.ToInt32(order.FilledQuantity),
+                                    Qty = Convert.ToInt32(existingPosition.Quantity),
                                     Side = "sell",
                                     Type = "limit",
                                     TimeInForce = "gtc",
-                                    LimitPrice = takeSellPriceRounded
+                                    OrderClass = "oco",
+                                    TakeProfit = new TakeProfit
+                                    {
+                                        LimitPrice = takeProfitPriceRounded
+                                    },
+                                    StopLoss = new StopLoss
+                                    {
+                                        StopPrice = stopLossPriceRounded,
+                                        LimitPrice = stopLossPriceRounded - 0.01M
+                                    }
                                 };
-                                var takeSellOrderResponse = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, takeSellOrderRequest);
 
-                                await Task.Delay(2000);
-
-                                var stopSellOrderRequest = new OrderRequest
+                                try
                                 {
-                                    Symbol = order.Symbol,
-                                    Qty = Convert.ToInt32(order.FilledQuantity),
-                                    Side = "sell",
-                                    Type = "stop",
-                                    TimeInForce = "gtc",
-                                    LimitPrice = stopSellPriceRounded
-                                };
-                                var stopSellOrderResponse = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, stopSellOrderRequest);
+                                    var ocoResponse = await _alpacaService.PlaceOrderAsync(brokerAccount.Id, ocoOrder);
 
-                                if (takeSellOrderResponse.Status == "accepted")
+                                    if (ocoResponse != null && ocoResponse.Status == "accepted" || ocoResponse.Status == "pending_new" || ocoResponse.Status == "filled")
+                                    {
+                                        await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL",
+                                            takeProfitPriceRounded,
+                                            Convert.ToInt32(order.FilledQuantity),
+                                            $"OCO emri verildi - Take Profit: {takeProfitPriceRounded}, Stop Loss: {stopLossPriceRounded}");
+
+                                        Console.WriteLine($"OCO emri başarıyla oluşturuldu - Symbol: {order.Symbol}");
+                                    }
+                                    else
+                                    {
+                                        await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL",
+                                            takeProfitPriceRounded,
+                                            Convert.ToInt32(order.FilledQuantity),
+                                            $"OCO emri başarısız - Status: {ocoResponse?.Status ?? "null"}");
+
+                                        Console.WriteLine($"OCO emri başarısız - Symbol: {order.Symbol}, Status: {ocoResponse?.Status ?? "null"}");
+                                    }
+                                }
+                                catch (Exception ex)
                                 {
-                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL", takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.SellOrderPlaced} - {takeSellPriceRounded}");
+                                    Console.WriteLine($"OCO emir hatası - Symbol: {order.Symbol}, Hata: {ex.Message}");
+                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL",
+                                        takeProfitPriceRounded,
+                                        Convert.ToInt32(order.FilledQuantity),
+                                        $"OCO emir hatası: {ex.Message}");
                                 }
 
-                                await Task.Delay(2000);
-
-                                if (takeSellOrderResponse.Status == "filled")
-                                {
-                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL", takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.OrderExecuted}");
-                                }
-
-                                if (stopSellOrderResponse.Status == "accepted")
-                                {
-                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL", takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.SellOrderPlaced} - {stopSellPriceRounded}");
-                                }
-
-                                await Task.Delay(2000);
-
-                                if (stopSellOrderResponse.Status == "filled")
-                                {
-                                    await _alpacaService.AlpacaLog(brokerAccount.Id, order.Symbol, "SELL", takeSellPriceRounded, Convert.ToInt32(order.FilledQuantity), $"{order.Symbol} {Messages.Trading.OrderExecuted}");
-                                }
+                                await Task.Delay(2000); 
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
-                        await _alpacaService.AlpacaLog(brokerAccount.Id, "-",null, null, null, $"{Messages.General.SystemError}: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                        Console.WriteLine($"Sistem hatası: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
+                        await _alpacaService.AlpacaLog(brokerAccount.Id, "-", null, null, null,
+                            $"Sistem hatası: {ex.Message} - BrokerAccountId: {brokerAccount.Id}");
                     }
                 }
             }
         }
     }
 }
-                                                

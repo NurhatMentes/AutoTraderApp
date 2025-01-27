@@ -13,9 +13,6 @@ namespace AutoTraderApp.Domain.Common
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
         public Guid CreatedByUserId { get; set; }
-        public Guid? UpdatedByUserId { get; set; }
-
-        public string FormattedCreatedAt => CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", new CultureInfo("tr-TR"));
-        public string FormattedUpdatedAt => UpdatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm", new CultureInfo("tr-TR"));            
+        public Guid? UpdatedByUserId { get; set; }          
     }
 }

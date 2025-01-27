@@ -136,10 +136,12 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                 try
                 {
                     var symbol = stock.Symbol;
+                   
+                    var alertName = $"{brokerAccount.BrokerType}//{strategy.StrategyName}";
 
                     Console.WriteLine($"---------------BUY Alert Creating for: {stock.Symbol}");
                     var buyAlertSuccess = _tradingViewSeleniumService.CreateAlertSync(
-                        $"{symbol}/{strategy.StrategyName}",
+                        alertName,
                         strategy.WebhookUrl,
                         "{{strategy.order.action}}",
                         stock.Symbol,

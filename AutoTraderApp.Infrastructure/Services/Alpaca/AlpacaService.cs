@@ -424,7 +424,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
         public async Task<OrderResponse[]> GetAllOrdersAsync(Guid brokerAccountId)
         {
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
-            var response = await httpClient.GetAsync("v2/orders");
+            var response = await httpClient.GetAsync("v2/orders?status=all");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<OrderResponse[]>();
         }

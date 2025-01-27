@@ -12,7 +12,7 @@ namespace AutoTraderApp.Core.Utilities.Calculators
         /// <param name="entryPrice">Giriş fiyatı.</param>
         /// <param name="stopLoss">Zararı durdurma fiyatı.</param>
         /// <returns>Alınabilecek hisse miktarı.</returns>
-        public static int CalculateQuantity(decimal accountValue, decimal riskPercentage, decimal entryPrice, decimal stopLoss)
+        public static int CalculateQuantity(decimal accountValue, decimal riskPercentage, decimal entryPrice, decimal stopLoss, decimal maxBuyingPowerPercent, int minBuyQuantity, int maxBuyQuantity)
         {
             if (entryPrice <= stopLoss)
             {
@@ -35,6 +35,23 @@ namespace AutoTraderApp.Core.Utilities.Calculators
             if (totalPrice < 2500)
             {
                 quantity = (int)Math.Ceiling(2500 / entryPrice);
+            }
+
+            // Maksimum alım gücüne göre miktarı sınırla
+            decimal maxQuantityForBuyingPower = (int)(maxBuyingPowerPercent / entryPrice);
+            if (quantity > maxQuantityForBuyingPower)
+            {
+                quantity = (int)maxQuantityForBuyingPower;
+            }
+
+            // Kullanıcının belirlediği minimum ve maksimum alım miktarlarına göre sınırla
+            if (quantity < minBuyQuantity)
+            {
+                quantity = minBuyQuantity;
+            }
+            else if (quantity > maxBuyQuantity)
+            {
+                quantity = maxBuyQuantity;
             }
 
             // Miktar en az 1 olmalı

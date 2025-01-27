@@ -67,23 +67,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
             }
 
 
-
-            decimal portfolioValue = account.Cash; 
-            decimal riskPercentage = 0.02m; 
-
-            int quantity;
-            try
-            {
-                quantity = QuantityCalculator.CalculateQuantity(portfolioValue, riskPercentage, strategy.EntryPrice, strategy.StopLoss);
-            }
-            catch (Exception ex)
-            {
-                return new ErrorResult($"Miktar hesaplama hatası: {ex.Message}");
-            }
-
-
-
-            var script = StrategyScriptGenerator.GenerateScript(strategy, quantity, null);
+            var script = StrategyScriptGenerator.GenerateScript(strategy, 10, null);
 
 
             var strategySuccess = await _automationService.CreateStrategyAsync(strategy.StrategyName, strategy.Symbol, script, strategy.WebhookUrl, request.UserId);
@@ -101,7 +85,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.CreateTradingVi
                 strategy.WebhookUrl,
                 "buy",
                 strategy.Symbol,
-                quantity,
+                10,
                 request.BrokerAccountId,
                 request.UserId
             );

@@ -1,15 +1,12 @@
 ﻿using AutoTraderApp.Application.Features.CombinedStocks.Commands;
 using AutoTraderApp.Application.Features.NasdaqStocks.Commands;
-using AutoTraderApp.Application.Features.Strategies.Helpers;
-using AutoTraderApp.Core.Utilities.Calculators;
-using AutoTraderApp.Core.Utilities.Generator;
+using AutoTraderApp.Core.Constants;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Core.Utilities.Services;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
-using System.Runtime.Intrinsics.X86;
 
 namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyToMultipleStocks
 {
@@ -42,8 +39,8 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             IBaseRepository<CombinedStock> combinedStockRepository,
             IAlphaVantageService alphaVantageService,
             IMediator mediator,
-             IBaseRepository<NasdaqStock> nasdaqStockRepository,
-             IBaseRepository<CustomStock> customStockRepository)
+            IBaseRepository<NasdaqStock> nasdaqStockRepository,
+            IBaseRepository<CustomStock> customStockRepository)
         {
             _strategyRepository = strategyRepository;
             _automationService = automationService;
@@ -63,64 +60,61 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             Console.WriteLine("Tüm TradingView alarmları temizleniyor...");
             var deleteAlertsResult = await _automationService.DeleteAllAlertsAsync();
             if (!deleteAlertsResult)
-                return new ErrorResult("TradingView alarmları temizlenemedi.");
+                return new ErrorResult(Messages.Alert.Deleted);
 
             //**********// Hisse listeleri güncelleniyor && çağırılıyor//**********//
 
             var updateResult = await _mediator.Send(new UpdateCombinedStockListCommand());
             if (!updateResult)
             {
-                return new ErrorResult($"Birleşik hisse güncellenemedi");
+                return new ErrorResult(Messages.General.Updated);
             }
 
             var combinedStocks = await _combinedStockRepository.GetAllAsync();
             if (combinedStocks == null || !combinedStocks.Any())
             {
-                return new ErrorResult("Birleşik hisse listesi bulunamadı.");
+                return new ErrorResult(Messages.General.DataNotFound);
             }
 
             var updateNasdaq = _mediator.Send(new UpdateNasdaqStocksCommand()).Result;
             if (!updateNasdaq)
             {
-                return new ErrorResult($"Nasdaq hisse listesi güncellenemedi");
+                return new ErrorResult(Messages.General.Updated);
             }
 
             var nasdaqStocks = await _nasdaqStockRepository.GetAllAsync();
             if (nasdaqStocks == null || !nasdaqStocks.Any())
             {
-                return new ErrorResult("Nasdaq hisse listesi bulunamadı.");
+                return new ErrorResult(Messages.General.DataNotFound);
             }
 
             var customStocks = _customStockRepository.GetAllAsync().Result;
             if (customStocks == null)
             {
-                return new ErrorResult("Nasdaq hisse listesi bulunamadı.");
+                return new ErrorResult(Messages.General.DataNotFound);
             }
             //**********//
-
-
 
             //**********//Kontroller//**********//
 
             // Strateji bilgisi
             var strategy = await _strategyRepository.GetAsync(s => s.Id == request.StrategyId);
             if (strategy == null)
-                return new ErrorResult("Strateji bulunamadı.");
+                return new ErrorResult(Messages.Strategy.NotFound);
 
             // Broker hesabı doğrulaması
             var brokerAccount = await _brokerAccountRepository.GetAsync(b => b.Id == request.BrokerAccountId && b.UserId == request.UserId);
             if (brokerAccount == null)
-                return new ErrorResult("Geçerli bir broker hesabı bulunamadı.");
+                return new ErrorResult(Messages.BrokerAccount.NotFound);
 
             // Alpaca hesabı doğrulaması
             var account = await _alpacaService.GetAccountInfoAsync(brokerAccount.Id);
             if (account == null)
-                return new ErrorResult("Kullanıcı hesabı bilgileri alınamadı.");
+                return new ErrorResult(Messages.Trading.AccountInfoNotFound);
 
             decimal accountValue = account.Equity;
             Console.WriteLine($"---------------Hesap değeri: {accountValue}");
             //**********//
-
 
             //**********//Alert Oluşturma//**********//
 
@@ -131,9 +125,6 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
 
                 try
                 {
-                    //int quantity = QuantityCalculator.CalculateQuantity(accountValue, riskPercentage, stock.Price ?? 0, stock.Price.Value * 0.95m);
-                    //string script = StrategyScriptGenerator.GenerateScript(strategy, quantity, stock.Symbol);
-
                     await Task.Delay(TimeSpan.FromSeconds(randomTime));
 
                     bool buyAlertSuccess = false;
@@ -144,7 +135,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                         buyAlertSuccess = await _automationService.CreateAlertAsync(
                             $"{stock.Symbol}/{strategy.StrategyName}",
                             strategy.WebhookUrl,
-                           "{{strategy.order.action}}",
+                            "{{strategy.order.action}}",
                             stock.Symbol,
                             10,
                             request.BrokerAccountId,
@@ -153,29 +144,26 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                         if (buyAlertSuccess)
                         {
                             buyAlertSuccess = false;
-                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Buy Alarm Oluşturma", "Başarılı", stock.Symbol, "Buy alarmı başarıyla oluşturuldu.");
+                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Buy Alarm Oluşturma", Messages.General.Success, stock.Symbol, "Buy alarmı başarıyla oluşturuldu.");
                         }
                         else
                         {
-                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Buy Alarm Oluşturma", "Hata", stock.Symbol, "Buy alarmı oluşturulamadı.");
+                            await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Buy Alarm Oluşturma", Messages.General.Error, stock.Symbol, "Buy alarmı oluşturulamadı.");
                         }
                     }
 
                     if (buyAlertSuccess)
                     {
-                        await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturma", "Başarılı", stock.Symbol, "--->> Buy ve Sell alarmları başarıyla oluşturuldu.");
+                        await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Alarm Oluşturma", Messages.General.Success, stock.Symbol, "--->> Buy ve Sell alarmları başarıyla oluşturuldu.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Çoklu Strateji Oluşturma", "Hata", stock.Symbol, $"Hata: {ex.Message}");
+                    await _logService.LogAsync(request.UserId, request.StrategyId, request.BrokerAccountId, "Çoklu Strateji Oluşturma", Messages.General.Error, stock.Symbol, $"{Messages.General.SystemError}: {ex.Message}");
                 }
             }
 
-
-
-            return new SuccessResult("Strateji belirtilen hisselere başarıyla uygulandı.");
+            return new SuccessResult(Messages.Strategy.Created);
         }
-
     }
 }

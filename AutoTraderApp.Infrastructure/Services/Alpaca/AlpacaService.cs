@@ -78,7 +78,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
 
 
-        public async Task<bool> AlpacaLog(Guid brokerAccountId, string symbol, decimal? price, int? quantity, string msg)
+        public async Task<bool> AlpacaLog(Guid brokerAccountId, string symbol, string? Action, decimal? price, int? quantity, string msg)
         {
             await _brokerLog.AddAsync(new BrokerLog
             {
@@ -86,7 +86,8 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 Message = msg,
                 Symbol = symbol,
                 Price = price,
-                Quantity = quantity
+                Quantity = quantity,
+                Action = Action
             });
 
             return true;
@@ -280,8 +281,8 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             if (position == null)
                 return new List<PositionResponse>();
 
-            return position.Select(position => new PositionResponse
-            {
+            return position.Select(position => new PositionResponse   
+            {     
                 BrokerAccountId = brokerAccountId,
                 Symbol = position.Symbol,
                 Quantity = position.Quantity,
@@ -423,7 +424,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
         public async Task<OrderResponse[]> GetAllOrdersAsync(Guid brokerAccountId)
         {
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
-            var response = await httpClient.GetAsync("v2/orders");
+            var response = await httpClient.GetAsync("v2/orders?status=all");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<OrderResponse[]>();
         }

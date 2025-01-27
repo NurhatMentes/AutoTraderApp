@@ -1,6 +1,9 @@
 ﻿using AutoTraderApp.Application.Features.Orders.Commands.PlaceOrder;
 using AutoTraderApp.Application.Features.Orders.DTOs;
 using AutoTraderApp.Application.Features.Position.Commands.ClosePosition;
+using AutoTraderApp.Application.Features.Position.Queries;
+using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
+using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,10 +14,12 @@ namespace AutoTraderApp.WebAPI.Controllers
     public class OrdersController : BaseController
     {
         private readonly IMediator _mediator;
+        private readonly IAlpacaService _alpacaService;
 
-        public OrdersController(IMediator mediator)
+        public OrdersController(IMediator mediator, IAlpacaService alpacaService)
         {
             _mediator = mediator;
+            _alpacaService = alpacaService;
         }
 
         [HttpPost("PlaceOrder")]
@@ -50,6 +55,15 @@ namespace AutoTraderApp.WebAPI.Controllers
                 success = true,
                 message = result.Message
             });
+        }
+
+        [HttpGet("alpaca/get-orders/{brokerAccountId}")]
+        public async Task<IActionResult> GetOrders(Guid brokerAccountId)
+        {
+            var result = await _alpacaService.GetAllOrdersAsync(brokerAccountId);
+            if (result != null)
+                return Ok(result);
+            return BadRequest(result);
         }
     }
 }

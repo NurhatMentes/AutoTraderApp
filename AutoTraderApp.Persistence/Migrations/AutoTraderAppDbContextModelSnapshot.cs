@@ -1131,7 +1131,7 @@ namespace AutoTraderApp.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingSettings", b =>
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingSetting", b =>
                 {
                     b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
                         .WithMany()

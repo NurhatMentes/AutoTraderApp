@@ -59,17 +59,20 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
             var transactionId = Guid.NewGuid();
             var position = await _alpacaService.GetPositionBySymbolAsync(signal.Symbol, signal.BrokerAccountId);
 
-                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) && signalTotalCost < 2500)
-                {                                                                           
-                    signal.Quantity = QuantityCalculator.StockCalculateQuantity( 
-                        accountBuyingPower,
-                        userTradingSettings.RiskPercentage,
-                        price,
-                        price * (1 + userTradingSettings.SellPricePercentage)/100,
-                        userTradingSettings.MaxRiskLimit,
-                        userTradingSettings.MinBuyQuantity,
-                        userTradingSettings.MaxBuyQuantity
-                    );
+            try
+            {
+                // Broker hesabını kontrol et
+                var brokerAccount = await _brokerAccountRepository.GetAsync(b => b.Id == signal.BrokerAccountId && b.UserId == signal.UserId);
+                if (brokerAccount == null)
+                    return new ErrorResult(Messages.Trading.InvalidBrokerAccount);
+
+                // Kullanıcının özelleştirilmiş ayarlarını al
+                var userTradingSettings = await _userTradingSetting.GetAsync(uts => uts.UserId == signal.UserId);
+                if (userTradingSettings == null)
+                    return new ErrorResult(Messages.General.DataNotFound);
+
+                // ABD borsa saatleri kontrolü (Türkiye saatine göre)
+                var nowTurkeyTime = DateTime.UtcNow.AddHours(3);
                 var marketOpen = new TimeSpan(11, 30, 0);
                 var marketClose = new TimeSpan(23, 45, 0);
                 //var currentDay = nowTurkeyTime.DayOfWeek;

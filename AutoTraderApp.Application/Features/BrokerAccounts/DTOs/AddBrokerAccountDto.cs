@@ -3,8 +3,12 @@
 public class AddBrokerAccountDto
 {
     public Guid UserId { get; set; }
+    public string BrokerType { get; set; }
+    public string BrokerName { get; set; }
     public string Name { get; set; }
     public string ApiKey { get; set; }
     public string ApiSecret { get; set; }
+    public string? ApiPassphrase { get; set; }
     public bool IsPaper { get; set; }
+    public decimal Balance { get; set; }
 }

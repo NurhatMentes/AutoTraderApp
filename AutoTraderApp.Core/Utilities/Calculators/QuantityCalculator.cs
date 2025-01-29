@@ -12,7 +12,7 @@ namespace AutoTraderApp.Core.Utilities.Calculators
         /// <param name="entryPrice">Giriş fiyatı.</param>
         /// <param name="stopLoss">Zararı durdurma fiyatı.</param>
         /// <returns>Alınabilecek hisse miktarı.</returns>
-        public static int CalculateQuantity(decimal accountValue, decimal riskPercentage, decimal entryPrice, decimal stopLoss)
+        public static int CalculateQuantity(decimal accountValue, decimal riskPercentage, decimal entryPrice, decimal stopLoss, decimal maxBuyingPowerPercent, int minBuyQuantity, int maxBuyQuantity)
         {
             if (entryPrice <= stopLoss)
             {
@@ -37,8 +37,44 @@ namespace AutoTraderApp.Core.Utilities.Calculators
                 quantity = (int)Math.Ceiling(2500 / entryPrice);
             }
 
+            // Maksimum alım gücüne göre miktarı sınırla
+            decimal maxQuantityForBuyingPower = (int)(maxBuyingPowerPercent / entryPrice);
+            if (quantity > maxQuantityForBuyingPower)
+            {
+                quantity = (int)maxQuantityForBuyingPower;
+            }
+
+            // Kullanıcının belirlediği minimum ve maksimum alım miktarlarına göre sınırla
+            if (quantity < minBuyQuantity)
+            {
+                quantity = minBuyQuantity;
+            }
+            else if (quantity > maxBuyQuantity)
+            {
+                quantity = maxBuyQuantity;
+            }
+
             // Miktar en az 1 olmalı
             return quantity > 0 ? quantity : 1;
+        }
+
+        public static decimal CalculateCryptoQuantity(decimal accountBalance, decimal riskPercentage, decimal cryptoPrice, decimal maxRiskLimit)
+        {
+            decimal riskAmount = accountBalance * riskPercentage;
+
+            if (riskAmount > maxRiskLimit)
+            {
+                riskAmount = maxRiskLimit;
+            }
+
+            if (cryptoPrice <= 0)
+            {
+                throw new Exception("Geçersiz kripto fiyatı.");
+            }
+
+            decimal quantity = riskAmount / cryptoPrice;
+
+            return Math.Round(quantity, 8); 
         }
     }
 }

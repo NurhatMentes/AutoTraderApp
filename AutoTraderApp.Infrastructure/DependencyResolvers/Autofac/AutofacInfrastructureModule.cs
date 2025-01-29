@@ -7,6 +7,7 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
 using AutoTraderApp.Infrastructure.Services.Alpaca;
 using AutoTraderApp.Infrastructure.Services.Automation.Playwrights;
+using AutoTraderApp.Infrastructure.Services.Binance;
 using AutoTraderApp.Infrastructure.Services.MarketData;
 using AutoTraderApp.Infrastructure.Services.Polygon;
 using AutoTraderApp.Infrastructure.Services.Telegram;
@@ -108,6 +109,10 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
             builder.RegisterType<TradingViewSelenium>()
       .As<ITradingViewSeleniumService>()
       .InstancePerLifetimeScope();
+
+            // Binance
+            builder.RegisterType<BinanceService>().As<IBinanceService>().InstancePerLifetimeScope();
+            builder.RegisterType<HttpClient>().SingleInstance();
         }
     }
 }

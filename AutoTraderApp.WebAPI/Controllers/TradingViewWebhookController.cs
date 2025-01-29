@@ -1,5 +1,5 @@
-﻿using AutoTraderApp.Application.Features.TradingView.Commands.ProcessTradingViewSignal;
-using AutoTraderApp.Application.Features.TradingView.Commands.SendStrategy;
+﻿using AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessTradingViewSignal;
+using AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradingViewSignal;
 using AutoTraderApp.Application.Features.TradingView.DTOs;
 using AutoTraderApp.Domain.ExternalModels.TradingView;
 using MediatR;
@@ -29,5 +29,14 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(result);
         }
 
+        [HttpPost("crypto-webhook")]
+        public async Task<IActionResult> CryptoWebhook([FromBody] TradingViewCryptoSignalDto signal)
+        {
+            var result = await _mediator.Send(new CryptoProcessTradingViewSignalCommand { Signal = signal });
+            if (result.Success)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
     }
 }

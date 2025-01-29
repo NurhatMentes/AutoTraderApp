@@ -14,6 +14,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         public Guid StrategyId { get; set; }
         public Guid BrokerAccountId { get; set; }
         public Guid UserId { get; set; }
+        public bool isMarginTrade { get; set; }
     }
 
     public class ApplyStrategyToMultipleStocksSyncCommandHandler : IRequestHandler<ApplyStrategyToMultipleStocksSyncCommand, IResult>
@@ -157,7 +158,9 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                         stock.Symbol,
                         10,
                         request.BrokerAccountId,
-                        request.UserId);
+                        request.UserId,
+                        request.isMarginTrade
+                        );
 
                     if (buyAlertSuccess)
                     {

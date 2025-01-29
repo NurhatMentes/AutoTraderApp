@@ -10,7 +10,7 @@ namespace AutoTraderApp.Infrastructure.Interfaces
 {
     public interface ITradingViewSeleniumService
     {
-        public bool CreateAlertSync(string strategyName, string webhookUrl, string action, string symbol, int quantity, Guid brokerAccountId, Guid userId);
+        public bool CreateAlertSync(string strategyName, string webhookUrl, string action, string symbol, int quantity, Guid brokerAccountId, Guid userId, bool isMarginTrade = false);
         public bool Login(Guid userId, string password);
     }
 }

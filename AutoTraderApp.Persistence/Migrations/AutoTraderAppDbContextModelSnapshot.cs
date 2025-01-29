@@ -873,6 +873,56 @@ namespace AutoTraderApp.Persistence.Migrations
                     b.ToTable("UserTradingAccounts", (string)null);
                 });
 
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BrokerType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("BuyPricePercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("MaxBuyQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MaxRiskLimit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("MinBuyQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("RiskPercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SellPricePercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserTradingSettings");
+                });
+
             modelBuilder.Entity("AutoTraderApp.Domain.ExternalModels.Telegram.TelegramBotConfig", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1079,6 +1129,17 @@ namespace AutoTraderApp.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingSettings", b =>
+                {
+                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerAccount", b =>

@@ -1,5 +1,4 @@
-﻿using AutoTraderApp.Application.Features.Strategies.Helpers;
-using AutoTraderApp.Application.Features.TradingView.DTOs;
+﻿using AutoTraderApp.Application.Features.TradingView.DTOs;
 using AutoTraderApp.Core.Constants;
 using AutoTraderApp.Core.Utilities.Calculators;
 using AutoTraderApp.Core.Utilities.Repositories;
@@ -9,11 +8,7 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
-using Newtonsoft.Json;
-using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Threading;
 
 namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradingViewSignal
 {
@@ -73,7 +68,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
 
                 // ABD borsa saatleri kontrolü (Türkiye saatine göre)
                 var nowTurkeyTime = DateTime.UtcNow.AddHours(3);
-                var marketOpen = new TimeSpan(11, 30, 0);
+                var marketOpen = new TimeSpan(16, 30, 0);
                 var marketClose = new TimeSpan(23, 45, 0);
                 //var currentDay = nowTurkeyTime.DayOfWeek;
 

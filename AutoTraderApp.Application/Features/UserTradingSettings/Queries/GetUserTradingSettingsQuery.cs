@@ -1,7 +1,6 @@
 ﻿using AutoTraderApp.Application.Features.UserTradingSettings.DTOs;
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
-using AutoTraderApp.Domain.Enums;
 using MediatR;
 
 namespace AutoTraderApp.Application.Features.UserTradingSettings.Queries
@@ -28,6 +27,7 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.Queries
 
             return new UserTradingSettingsDto
             {
+                UserName = settings.User.FirstName + " " + settings.User.LastName,
                 BrokerType = settings.BrokerType,
                 RiskPercentage = settings.RiskPercentage,
                 MaxRiskLimit = settings.MaxRiskLimit,

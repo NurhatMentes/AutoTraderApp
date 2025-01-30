@@ -24,9 +24,13 @@ namespace AutoTraderApp.Core.Utilities.Calculators
 
             // Hisse başına risk miktarını hesapla
             decimal perUnitRisk = entryPrice - stopLoss;
+            if (perUnitRisk <= 0)
+            {
+                throw new ArgumentException("Stop-loss seviyesi giriş fiyatından büyük olamaz.");
+            }
 
             // Hesaplanan miktarı bul
-            int quantity = (int)(riskAmount / perUnitRisk);
+            int quantity = (int)(Math.Floor(riskAmount / perUnitRisk));
 
             // Toplam fiyatı hesapla
             decimal totalPrice = quantity * entryPrice;

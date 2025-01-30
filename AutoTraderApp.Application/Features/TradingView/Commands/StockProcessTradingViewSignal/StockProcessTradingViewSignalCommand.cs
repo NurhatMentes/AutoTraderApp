@@ -8,7 +8,10 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
+using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradingViewSignal
 {
@@ -104,9 +107,9 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
                 // Minimum toplam fiyat kontrolü
                 if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
                 {
-                    decimal stopLoss = price * (1 - userTradingSettings.RiskPercentage); 
+                    decimal stopLoss = price * (1 - userTradingSettings.RiskPercentage);
                     signal.Quantity = QuantityCalculator.StockCalculateQuantity(
-                        riskLimit, 
+                        riskLimit,
                         userTradingSettings.RiskPercentage,
                         price,
                         stopLoss,

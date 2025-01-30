@@ -19,13 +19,13 @@ namespace AutoTraderApp.Domain.Entities
         /// Kullanıcının her bir işlemde riske etmek istediği toplam hesap bakiyesinin yüzdesini temsil eder.
         /// Örneğin, %2 risk yüzdesi, 10.000 USD'lik bir hesap için 200 USD'lik bir risk anlamına gelir.
         /// </summary>
-        public decimal RiskPercentage { get; set; } = 0.02m; 
+        public decimal RiskPercentage { get; set; } = 0.02m;
 
         /// <summary>
         /// Kullanıcının tek bir işlemde riske edebileceği maksimum tutarı belirtir.
         /// Risk yüzdesi hesaplamasından bağımsız olarak, tek bir işlemde riske edebilecekleri maksimum tutarı sınırlar.
         /// </summary>
-        public decimal MaxRiskLimit { get; set; } = 2500; 
+        public decimal MaxRiskLimit { get; set; } = 2500;
 
         // Alım-Satım Parametreleri
 
@@ -39,7 +39,7 @@ namespace AutoTraderApp.Domain.Entities
         /// Kullanıcının bir hisse senedi için alım yaparken belirlediği maksimum miktarı temsil eder.
         /// Tek bir işlemde çok fazla miktarda alım yapmayı önlemek için kullanılır.
         /// </summary>
-        public int MaxBuyQuantity { get; set; } = 100; 
+        public int MaxBuyQuantity { get; set; } = 100;
 
         /// <summary>
         /// Kullanıcının bir hisse senedini alırken mevcut fiyatın yüzdesi olarak belirlediği alım fiyatını temsil eder.

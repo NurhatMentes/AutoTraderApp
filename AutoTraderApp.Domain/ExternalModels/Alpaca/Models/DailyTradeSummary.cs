@@ -1,4 +1,6 @@
-﻿namespace AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
+﻿using System.Text.Json.Serialization;
+
+namespace AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 
 public class DailyTradeDetails
 {

@@ -3,6 +3,7 @@ using AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradin
 using AutoTraderApp.Application.Features.TradingView.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace AutoTraderApp.WebAPI.Controllers
 {

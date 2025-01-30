@@ -3,6 +3,9 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using MediatR;
+using System.Threading.Tasks;
+using System.Threading;
+using System;
 
 namespace AutoTraderApp.Application.Features.UserTradingSettings.Commands
 {

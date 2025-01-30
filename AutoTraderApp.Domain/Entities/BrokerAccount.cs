@@ -1,5 +1,7 @@
 ﻿using AutoTraderApp.Domain.Common;
 using AutoTraderApp.Domain.Enums;
+using System.Collections.Generic;
+using System;
 
 namespace AutoTraderApp.Domain.Entities;
 

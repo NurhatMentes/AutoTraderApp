@@ -1,4 +1,5 @@
 ﻿using AutoTraderApp.Core.Utilities.Results;
+using System;
 
 namespace AutoTraderApp.Core.Utilities.Calculators
 {
@@ -77,7 +78,7 @@ namespace AutoTraderApp.Core.Utilities.Calculators
 
             decimal quantity = riskAmount / cryptoPrice;
 
-            return Math.Round(quantity, 8); 
+            return Math.Round(quantity, 8);
         }
     }
 }

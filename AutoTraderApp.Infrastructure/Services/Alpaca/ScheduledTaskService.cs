@@ -4,6 +4,8 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
+using System;
 
 
 namespace AutoTraderApp.Infrastructure.Services.Alpaca

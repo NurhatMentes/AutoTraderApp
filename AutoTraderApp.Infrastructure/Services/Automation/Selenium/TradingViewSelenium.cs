@@ -5,6 +5,7 @@ using AutoTraderApp.Infrastructure.Interfaces;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium;
 using System.Globalization;
+using OpenQA.Selenium.Support.UI;
 
 public class TradingViewSelenium : ITradingViewSeleniumService
 {
@@ -112,14 +113,35 @@ public class TradingViewSelenium : ITradingViewSeleniumService
                 });
 
                 // Alert Name
+                // "Add a custom name" butonuna tıklama
                 //RetryAction(() =>
                 //{
-                //    var alertNameInput = _driver.FindElement(By.Id("alert-name"));
+                //    WebDriverWait wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(4));
+
+                //    // Doğrudan XPath kullanarak butonu bul ve tıklanabilir olmasını bekle
+                //    var addCustomNameButton = wait.Until(driver =>
+                //    {
+                //        var element = driver.FindElement(By.XPath("//button[@id='alert-name']"));
+                //        return (element.Displayed && element.Enabled) ? element : null;
+                //    });
+                //    addCustomNameButton.Click();
+                //    Console.WriteLine("Add a custom name button clicked.");
+                //    Thread.Sleep(1000); // Butonun açılmasını bekle
+
+                //    // İsim kutucuğunu bul ve isim gir
+                //    var alertNameInput = wait.Until(driver =>
+                //    {
+                //        var element = driver.FindElement(By.XPath("//input[@id='alert-name']"));
+                //        return element.Displayed ? element : null;
+                //    });
                 //    alertNameInput.Clear();
                 //    alertNameInput.SendKeys(strategyName);
                 //    Console.WriteLine("Alert name set.");
-                //    Thread.Sleep(4000);
+                //    Thread.Sleep(2000);
                 //});
+
+
+
 
                 // Expiration
                 RetryAction(() =>

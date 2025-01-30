@@ -59,7 +59,6 @@ public static class Messages
         public const string PositionClosed = "Pozisyon kapatıldı";
         public const string PositionNotFound = "Pozisyon bulunamadı";
         public const string InsufficientBalance = "Yetersiz bakiye";
-        public const string InsufficientBuyingPower = "Yetersiz alım gücü";
         public const string InvalidAmount = "Geçersiz miktar";
         public const string MarketClosed = "Borsa saatleri dışında sinyal işlenemez";
         public const string DayOfWeekMarketClosed = "Hafta sonları sinyal işlenemez";
@@ -77,7 +76,7 @@ public static class Messages
         public const string AssetNotShortable = "Varlık kısa satışa uygun değil";
         public const string OrderRetryFailed = "İşlem tekrar denemesi başarısız oldu";
         public const string BuyingPower = "Alım Gücü";
-
+        public const string PriceNotFound = "Binance fiyat verisi alınamadı";
     }
 
     public static class BrokerAccount

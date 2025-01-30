@@ -2,6 +2,9 @@
 using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
 using MediatR;
+using System.Threading.Tasks;
+using System.Threading;
+using System;
 
 namespace AutoTraderApp.Application.Features.UserTradingSettings.Queries
 {
@@ -27,6 +30,8 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.Queries
 
             return new UserTradingSettingsDto
             {
+                UserName = settings.User.FirstName + " " + settings.User.LastName,
+                BrokerType = settings.BrokerType,
                 RiskPercentage = settings.RiskPercentage,
                 MaxRiskLimit = settings.MaxRiskLimit,
                 MinBuyQuantity = settings.MinBuyQuantity,

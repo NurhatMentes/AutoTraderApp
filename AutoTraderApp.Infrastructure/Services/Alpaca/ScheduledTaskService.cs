@@ -1,11 +1,11 @@
 ﻿using AutoTraderApp.Core.Constants;
 using AutoTraderApp.Core.Utilities.Repositories;
-using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
-using System.Transactions;
+using System.Threading.Tasks;
+using System;
 
 
 namespace AutoTraderApp.Infrastructure.Services.Alpaca
@@ -144,7 +144,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                                     buyPrice, Convert.ToInt32(order.FilledQuantity),
                                     $"{order.Symbol} alım emri gerçekleşti, OCO emirleri oluşturuluyor");
 
-                                decimal takeProfitPrice = buyPrice * (1 + userTradingSettings.BuyPricePercentage / 100m);
+                                decimal takeProfitPrice = buyPrice * (1 + userTradingSettings.SellPricePercentage / 100m);
                                 decimal takeProfitPriceRounded = Math.Floor(takeProfitPrice * 100) / 100;
 
                                 decimal stopLossPrice = buyPrice * (1 - userTradingSettings.BuyPricePercentage / 100m);
@@ -202,7 +202,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                                         $"OCO emir hatası: {ex.Message}");
                                 }
 
-                                await Task.Delay(2000); 
+                                await Task.Delay(2000);
                             }
                         }
                     }

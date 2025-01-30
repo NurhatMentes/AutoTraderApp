@@ -1,5 +1,4 @@
-﻿using AutoTraderApp.Application.Features.Strategies.Helpers;
-using AutoTraderApp.Application.Features.TradingView.DTOs;
+﻿using AutoTraderApp.Application.Features.TradingView.DTOs;
 using AutoTraderApp.Core.Constants;
 using AutoTraderApp.Core.Utilities.Calculators;
 using AutoTraderApp.Core.Utilities.Repositories;
@@ -9,8 +8,10 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
-using Newtonsoft.Json;
+using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradingViewSignal
 {
@@ -70,7 +71,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
 
                 // ABD borsa saatleri kontrolü (Türkiye saatine göre)
                 var nowTurkeyTime = DateTime.UtcNow.AddHours(3);
-                var marketOpen = new TimeSpan(11, 30, 0);
+                var marketOpen = new TimeSpan(16, 30, 0);
                 var marketClose = new TimeSpan(23, 45, 0);
                 //var currentDay = nowTurkeyTime.DayOfWeek;
 
@@ -94,36 +95,39 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
                 decimal accountBuyingPower = (decimal)account.BuyingPower;
 
                 // Risk yönetimi: Kullanıcının belirlediği risk yüzdesi ve maksimum risk limiti
-                decimal riskLimit = accountBuyingPower * userTradingSettings.RiskPercentage;
+                decimal riskLimit = Math.Min(accountBuyingPower * userTradingSettings.RiskPercentage, accountBuyingPower);
                 if (riskLimit > userTradingSettings.MaxRiskLimit)
                 {
                     riskLimit = userTradingSettings.MaxRiskLimit;
                 }
 
+
                 decimal signalTotalCost = signal.Quantity * price;
 
                 // Minimum toplam fiyat kontrolü
-                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) && signalTotalCost < 2500)
-                {                                                                           
-                    signal.Quantity = QuantityCalculator.CalculateQuantity( 
-                        accountBuyingPower,
+                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase))
+                {
+                    decimal stopLoss = price * (1 - userTradingSettings.RiskPercentage);
+                    signal.Quantity = QuantityCalculator.StockCalculateQuantity(
+                        riskLimit,
                         userTradingSettings.RiskPercentage,
                         price,
-                        price * (1 + userTradingSettings.SellPricePercentage)/100,
+                        stopLoss,
                         userTradingSettings.MaxRiskLimit,
                         userTradingSettings.MinBuyQuantity,
                         userTradingSettings.MaxBuyQuantity
                     );
+
                     signalTotalCost = signal.Quantity * price;
-                    Console.WriteLine($"Toplam maliyet 2500 doların altındaydı, ayarlanan miktar: {signal.Quantity}");
                 }
 
 
                 // Buying Power kontrolü ve miktar ayarlaması
-                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) && signalTotalCost > accountBuyingPower)
+                if (signal.Action.Equals("BUY", StringComparison.OrdinalIgnoreCase) && signalTotalCost > riskLimit)
                 {
-                    int adjustedQuantity = (int)(accountBuyingPower / price);
-                    Console.WriteLine($"Buying power limitini aşan sinyal: {signal.Symbol}. Orijinal Miktar: {signal.Quantity}, Ayarlanan Miktar: {adjustedQuantity}, Buying Power: {accountBuyingPower}");
+                    int adjustedQuantity = (int)(riskLimit / price);
+
+                    Console.WriteLine($"Buying power limitini aşan sinyal: {signal.Symbol}. Orijinal Miktar: {signal.Quantity}, Ayarlanan Miktar: {adjustedQuantity}, Buying Power: {accountBuyingPower}, Risk Limiti: {riskLimit}");
 
                     if (adjustedQuantity > 0)
                     {
@@ -212,7 +216,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
                 var openOrders = await _alpacaService.GetAllOrdersAsync(brokerAccount.Id);
                 foreach (var order in openOrders)
                 {
-                    if (order.Symbol == signal.Symbol && order.Side == "buy" && order.Status =="new")
+                    if (order.Symbol == signal.Symbol && order.Side == "buy" && order.Status == "new")
                     {
                         await _alpacaService.CancelOrderAsync(order.OrderId, brokerAccount.Id);
                         Console.WriteLine($"Alım emri iptal edildi: {order.OrderId}");

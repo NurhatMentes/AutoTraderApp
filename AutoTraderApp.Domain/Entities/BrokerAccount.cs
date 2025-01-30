@@ -1,5 +1,7 @@
 ﻿using AutoTraderApp.Domain.Common;
 using AutoTraderApp.Domain.Enums;
+using System.Collections.Generic;
+using System;
 
 namespace AutoTraderApp.Domain.Entities;
 
@@ -7,11 +9,11 @@ public class BrokerAccount : BaseEntity
 {
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
-    public string BrokerType { get; set; } = "Hisse"; 
-    public string BrokerName { get; set; } 
-    public string Name { get; set; } 
-    public string ApiKey { get; set; } 
-    public string ApiSecret { get; set; } 
+    public string BrokerType { get; set; } = "Hisse";
+    public string BrokerName { get; set; }
+    public string Name { get; set; }
+    public string ApiKey { get; set; }
+    public string ApiSecret { get; set; }
     public string? ApiPassphrase { get; set; }
     public bool IsPaper { get; set; }
     public decimal Balance { get; set; }

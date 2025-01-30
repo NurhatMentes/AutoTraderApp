@@ -23,1150 +23,1143 @@ namespace AutoTraderApp.Persistence.Migrations
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerAccount", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ApiKey")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                b.Property<string>("ApiKey")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("ApiPassphrase")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                b.Property<string>("ApiPassphrase")
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("ApiSecret")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                b.Property<string>("ApiSecret")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
 
-                    b.Property<decimal>("Balance")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                b.Property<decimal>("Balance")
+                    .HasPrecision(18, 8)
+                    .HasColumnType("decimal(18,8)");
 
-                    b.Property<string>("BrokerName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<string>("BrokerType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<bool>("IsPaper")
+                    .HasColumnType("bit");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("IsPaper")
-                        .HasColumnType("bit");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.HasKey("Id");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                b.HasIndex("UserId");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("BrokerAccounts", (string)null);
-                });
+                b.ToTable("BrokerAccounts", (string)null);
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Action")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<Guid>("BrokerAccountId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<string>("Message")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<decimal?>("Price")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal?>("Price")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<int?>("Quantity")
+                    .HasColumnType("int");
 
-                    b.Property<int?>("Quantity")
-                        .HasColumnType("int");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.HasKey("Id");
 
-                    b.HasKey("Id");
-
-                    b.ToTable("BrokerLogs");
-                });
+                b.ToTable("BrokerLogs");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.ClosedPosition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("BrokerAccountId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("ClosedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("ClosedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("Quantity")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("RealizedPnL")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("RealizedPnL")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("ClosedPositions");
-                });
+                b.ToTable("ClosedPositions");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.CombinedStock", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Category")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("ChangePercentage")
-                        .HasColumnType("decimal(5,2)");
+                b.Property<decimal?>("ChangePercentage")
+                    .HasColumnType("decimal(5,2)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal?>("Price")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal?>("Price")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasMaxLength(10)
+                    .HasColumnType("nvarchar(10)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<long?>("Volume")
-                        .HasColumnType("bigint");
+                b.Property<long?>("Volume")
+                    .HasColumnType("bigint");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("combinedStocks");
-                });
+                b.ToTable("combinedStocks");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.CustomStock", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("CustomStocks");
-                });
+                b.ToTable("CustomStocks");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.NasdaqStock", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("AssetType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("AssetType")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("DelistingDate")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("DelistingDate")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Exchange")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Exchange")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("IpoDate")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("IpoDate")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("NasdaqStocks");
-                });
+                b.ToTable("NasdaqStocks");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.OperationClaim", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("OperationClaims");
-                });
+                b.ToTable("OperationClaims");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Order", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("BrokerAccountId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal?>("FilledPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                b.Property<decimal?>("FilledPrice")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("decimal(18,4)");
 
-                    b.Property<decimal?>("FilledQuantity")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                b.Property<decimal?>("FilledQuantity")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("decimal(18,4)");
 
-                    b.Property<decimal?>("LimitPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                b.Property<decimal?>("LimitPrice")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("decimal(18,4)");
 
-                    b.Property<string>("OrderClass")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("OrderClass")
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
+                b.Property<int>("Quantity")
+                    .HasColumnType("int");
 
-                    b.Property<string>("Side")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Side")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("StopLossLimitPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                b.Property<decimal?>("StopLossLimitPrice")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("decimal(18,4)");
 
-                    b.Property<decimal?>("StopLossStopPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                b.Property<decimal?>("StopLossStopPrice")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("decimal(18,4)");
 
-                    b.Property<decimal?>("StopPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                b.Property<decimal?>("StopPrice")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("decimal(18,4)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<decimal?>("TakeProfitLimitPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                b.Property<decimal?>("TakeProfitLimitPrice")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("decimal(18,4)");
 
-                    b.Property<string>("TimeInForce")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("TimeInForce")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Type")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("BrokerAccountId");
+                b.HasIndex("BrokerAccountId");
 
-                    b.ToTable("Orders", (string)null);
-                });
+                b.ToTable("Orders", (string)null);
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Position", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("BrokerAccountId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("CostBasis")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("CostBasis")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("CurrentPrice")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("CurrentPrice")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("EntryPrice")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("EntryPrice")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<bool>("IsOpen")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsOpen")
+                    .HasColumnType("bit");
 
-                    b.Property<decimal>("MarketValue")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("MarketValue")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("Quantity")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("RealizedPnL")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("RealizedPnL")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<decimal>("TodayChange")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("TodayChange")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("UnrealizedPnL")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("UnrealizedPnL")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("UnrealizedPnLPercentage")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("UnrealizedPnLPercentage")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("BrokerAccountId");
+                b.HasIndex("BrokerAccountId");
 
-                    b.ToTable("Positions", (string)null);
-                });
+                b.ToTable("Positions", (string)null);
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Signal", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Action")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("Price")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Strategy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Strategy")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Ticker")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Ticker")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("Timestamp")
+                    .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("Signals");
-                });
+                b.ToTable("Signals");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Strategy", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("AdxSmoothing")
-                        .HasColumnType("int");
+                b.Property<int>("AdxSmoothing")
+                    .HasColumnType("int");
 
-                    b.Property<float>("AdxThreshold")
-                        .HasColumnType("real");
+                b.Property<float>("AdxThreshold")
+                    .HasColumnType("real");
 
-                    b.Property<int>("AtrLength")
-                        .HasColumnType("int");
+                b.Property<int>("AtrLength")
+                    .HasColumnType("int");
 
-                    b.Property<int>("BollingerLength")
-                        .HasColumnType("int");
+                b.Property<int>("BollingerLength")
+                    .HasColumnType("int");
 
-                    b.Property<float>("BollingerMultiplier")
-                        .HasColumnType("real");
+                b.Property<float>("BollingerMultiplier")
+                    .HasColumnType("real");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("DmiLength")
-                        .HasColumnType("int");
+                b.Property<int>("DmiLength")
+                    .HasColumnType("int");
 
-                    b.Property<decimal>("EntryPrice")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("EntryPrice")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
 
-                    b.Property<int>("RsiLength")
-                        .HasColumnType("int");
+                b.Property<int>("RsiLength")
+                    .HasColumnType("int");
 
-                    b.Property<float>("RsiLower")
-                        .HasColumnType("real");
+                b.Property<float>("RsiLower")
+                    .HasColumnType("real");
 
-                    b.Property<float>("RsiUpper")
-                        .HasColumnType("real");
+                b.Property<float>("RsiUpper")
+                    .HasColumnType("real");
 
-                    b.Property<int>("StochRsiLength")
-                        .HasColumnType("int");
+                b.Property<int>("StochRsiLength")
+                    .HasColumnType("int");
 
-                    b.Property<float>("StochRsiLower")
-                        .HasColumnType("real");
+                b.Property<float>("StochRsiLower")
+                    .HasColumnType("real");
 
-                    b.Property<float>("StochRsiUpper")
-                        .HasColumnType("real");
+                b.Property<float>("StochRsiUpper")
+                    .HasColumnType("real");
 
-                    b.Property<decimal>("StopLoss")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("StopLoss")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("StrategyName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                b.Property<string>("StrategyName")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasMaxLength(10)
+                    .HasColumnType("nvarchar(10)");
 
-                    b.Property<decimal>("TakeProfit")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("TakeProfit")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("TimeFrame")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                b.Property<string>("TimeFrame")
+                    .IsRequired()
+                    .HasMaxLength(10)
+                    .HasColumnType("nvarchar(10)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("WebhookUrl")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("WebhookUrl")
+                    .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("Strategies", (string)null);
-                });
+                b.ToTable("Strategies", (string)null);
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Trade", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("BrokerAccountId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("Price")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("Quantity")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("Timestamp")
+                    .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("BrokerAccountId");
+                b.HasIndex("BrokerAccountId");
 
-                    b.ToTable("Trades", (string)null);
-                });
+                b.ToTable("Trades", (string)null);
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingViewLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("BrokerAccountId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                b.Property<string>("Message")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("Step")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                b.Property<string>("Step")
+                    .IsRequired()
+                    .HasMaxLength(150)
+                    .HasColumnType("nvarchar(150)");
 
-                    b.Property<Guid>("StrategyId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("StrategyId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("nvarchar(20)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("BrokerAccountId");
+                b.HasIndex("BrokerAccountId");
 
-                    b.HasIndex("StrategyId");
+                b.HasIndex("StrategyId");
 
-                    b.HasIndex("UserId");
+                b.HasIndex("UserId");
 
-                    b.ToTable("TradingViewLogs", (string)null);
-                });
+                b.ToTable("TradingViewLogs", (string)null);
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingViewSignalLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                b.Property<string>("Action")
+                    .IsRequired()
+                    .HasMaxLength(10)
+                    .HasColumnType("nvarchar(10)");
 
-                    b.Property<Guid>("BrokerAccountId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("BrokerAccountId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Message")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                b.Property<string>("Message")
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
 
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("Price")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("Quantity")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                b.Property<string>("Symbol")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("nvarchar(20)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("BrokerAccountId");
+                b.HasIndex("BrokerAccountId");
 
-                    b.HasIndex("UserId");
+                b.HasIndex("UserId");
 
-                    b.ToTable("TradingViewSignalLogs", (string)null);
-                });
+                b.ToTable("TradingViewSignalLogs", (string)null);
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("FirstName")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<bool>("IsTwoFactorEnabled")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsTwoFactorEnabled")
+                    .HasColumnType("bit");
 
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("LastName")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<byte[]>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("varbinary(max)");
+                b.Property<byte[]>("PasswordHash")
+                    .IsRequired()
+                    .HasColumnType("varbinary(max)");
 
-                    b.Property<byte[]>("PasswordSalt")
-                        .IsRequired()
-                        .HasColumnType("varbinary(max)");
+                b.Property<byte[]>("PasswordSalt")
+                    .IsRequired()
+                    .HasColumnType("varbinary(max)");
 
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("PhoneNumber")
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ProfileImageUrl")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("ProfileImageUrl")
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                b.Property<int>("Status")
+                    .HasColumnType("int");
 
-                    b.Property<string>("TwoFactorSecret")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("TwoFactorSecret")
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("UserName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("UserName")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("Users", (string)null);
-                });
+                b.ToTable("Users", (string)null);
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserOperationClaim", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("OperationClaimId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("OperationClaimId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("OperationClaimId");
+                b.HasIndex("OperationClaimId");
 
-                    b.HasIndex("UserId");
+                b.HasIndex("UserId");
 
-                    b.ToTable("UserOperationClaims");
-                });
+                b.ToTable("UserOperationClaims");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingAccount", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                b.Property<string>("Email")
+                    .IsRequired()
+                    .HasMaxLength(255)
+                    .HasColumnType("nvarchar(255)");
 
-                    b.Property<string>("EncryptedPassword")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("EncryptedPassword")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PasswordSalt")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("PasswordSalt")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("TwoFactorExpiry")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("TwoFactorExpiry")
+                    .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                b.HasIndex("UserId");
 
-                    b.ToTable("UserTradingAccounts", (string)null);
-                });
+                b.ToTable("UserTradingAccounts", (string)null);
+            });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingSettings", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingSetting", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("BuyPricePercentage")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<string>("BrokerType")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<decimal>("BuyPricePercentage")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<int>("MaxBuyQuantity")
-                        .HasColumnType("int");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("MaxRiskLimit")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<int>("MaxBuyQuantity")
+                    .HasColumnType("int");
 
-                    b.Property<int>("MinBuyQuantity")
-                        .HasColumnType("int");
+                b.Property<decimal>("MaxRiskLimit")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("RiskPercentage")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<int>("MinBuyQuantity")
+                    .HasColumnType("int");
 
-                    b.Property<decimal>("SellPricePercentage")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("RiskPercentage")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<decimal>("SellPricePercentage")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasIndex("UserId");
+                b.HasKey("Id");
 
-                    b.ToTable("UserTradingSettings");
-                });
+                b.HasIndex("UserId");
+
+                b.ToTable("UserTradingSettings");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.ExternalModels.Telegram.TelegramBotConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("BotToken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("BotToken")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("WebhookUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("WebhookUrl")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("TelegramBotConfigs");
-                });
+                b.ToTable("TelegramBotConfigs");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.ExternalModels.Telegram.TelegramUser", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ChannelId")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("ChannelId")
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ChatId")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("ChatId")
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("PhoneNumber")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid?>("UpdatedByUserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("TelegramUsers");
-                });
+                b.ToTable("TelegramUsers");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerAccount", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Navigation("User");
-                });
+                b.Navigation("User");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Order", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
-                        .WithMany("Orders")
-                        .HasForeignKey("BrokerAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
+                    .WithMany("Orders")
+                    .HasForeignKey("BrokerAccountId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("BrokerAccount");
-                });
+                b.Navigation("BrokerAccount");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Position", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", null)
-                        .WithMany("Positions")
-                        .HasForeignKey("BrokerAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", null)
+                    .WithMany("Positions")
+                    .HasForeignKey("BrokerAccountId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.Trade", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
-                        .WithMany("Trades")
-                        .HasForeignKey("BrokerAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
+                    .WithMany("Trades")
+                    .HasForeignKey("BrokerAccountId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("BrokerAccount");
-                });
+                b.Navigation("BrokerAccount");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingViewLog", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
-                        .WithMany()
-                        .HasForeignKey("BrokerAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
+                    .WithMany()
+                    .HasForeignKey("BrokerAccountId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.HasOne("AutoTraderApp.Domain.Entities.Strategy", "Strategy")
-                        .WithMany()
-                        .HasForeignKey("StrategyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                b.HasOne("AutoTraderApp.Domain.Entities.Strategy", "Strategy")
+                    .WithMany()
+                    .HasForeignKey("StrategyId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Navigation("BrokerAccount");
+                b.Navigation("BrokerAccount");
 
-                    b.Navigation("Strategy");
+                b.Navigation("Strategy");
 
-                    b.Navigation("User");
-                });
+                b.Navigation("User");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.TradingViewSignalLog", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
-                        .WithMany()
-                        .HasForeignKey("BrokerAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.BrokerAccount", "BrokerAccount")
+                    .WithMany()
+                    .HasForeignKey("BrokerAccountId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Navigation("BrokerAccount");
+                b.Navigation("BrokerAccount");
 
-                    b.Navigation("User");
-                });
+                b.Navigation("User");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.User", b =>
+            {
+                b.OwnsOne("AutoTraderApp.Domain.ValueObjects.Email", "Email", b1 =>
                 {
-                    b.OwnsOne("AutoTraderApp.Domain.ValueObjects.Email", "Email", b1 =>
-                        {
-                            b1.Property<Guid>("UserId")
-                                .HasColumnType("uniqueidentifier");
+                    b1.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
-                            b1.Property<string>("Address")
-                                .IsRequired()
-                                .HasMaxLength(100)
-                                .HasColumnType("nvarchar(100)")
-                                .HasColumnName("Email");
+                    b1.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("Email");
 
-                            b1.HasKey("UserId");
+                    b1.HasKey("UserId");
 
-                            b1.ToTable("Users");
+                    b1.ToTable("Users");
 
-                            b1.WithOwner()
-                                .HasForeignKey("UserId");
-                        });
-
-                    b.Navigation("Email")
-                        .IsRequired();
+                    b1.WithOwner()
+                        .HasForeignKey("UserId");
                 });
+
+                b.Navigation("Email")
+                    .IsRequired();
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserOperationClaim", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.OperationClaim", "OperationClaim")
-                        .WithMany("UserOperationClaims")
-                        .HasForeignKey("OperationClaimId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.OperationClaim", "OperationClaim")
+                    .WithMany("UserOperationClaims")
+                    .HasForeignKey("OperationClaimId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany("UserOperationClaims")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
+                    .WithMany("UserOperationClaims")
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("OperationClaim");
+                b.Navigation("OperationClaim");
 
-                    b.Navigation("User");
-                });
+                b.Navigation("User");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingAccount", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.User", null)
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+            });
 
-            modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingSettings", b =>
-                {
-                    b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+            modelBuilder.Entity("AutoTraderApp.Domain.Entities.UserTradingSetting", b =>
+            {
+                b.HasOne("AutoTraderApp.Domain.Entities.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("User");
-                });
+                b.Navigation("User");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.BrokerAccount", b =>
-                {
-                    b.Navigation("Orders");
+            {
+                b.Navigation("Orders");
 
-                    b.Navigation("Positions");
+                b.Navigation("Positions");
 
-                    b.Navigation("Trades");
-                });
+                b.Navigation("Trades");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.OperationClaim", b =>
-                {
-                    b.Navigation("UserOperationClaims");
-                });
+            {
+                b.Navigation("UserOperationClaims");
+            });
 
             modelBuilder.Entity("AutoTraderApp.Domain.Entities.User", b =>
-                {
-                    b.Navigation("UserOperationClaims");
-                });
+            {
+                b.Navigation("UserOperationClaims");
+            });
 #pragma warning restore 612, 618
         }
     }

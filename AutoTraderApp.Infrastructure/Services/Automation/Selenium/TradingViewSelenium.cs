@@ -89,7 +89,7 @@ public class TradingViewSelenium : ITradingViewSeleniumService
         }
     }
 
-    public bool CreateAlertSync(string strategyName, string webhookUrl, string action, string symbol, int quantity, Guid brokerAccountId, Guid userId)
+    public bool CreateAlertSync(string strategyName, string webhookUrl, string action, string symbol, int quantity, Guid brokerAccountId, Guid userId, bool isMarginTrade = false)
     {
         const int maxRetries = 2;
         int retryCount = 0;
@@ -167,7 +167,8 @@ public class TradingViewSelenium : ITradingViewSeleniumService
   ""symbol"": ""{symbol}"",
   ""quantity"": {quantity},
   ""brokerAccountId"": ""{brokerAccountId}"",
-  ""userId"": ""{userId}""
+  ""userId"": ""{userId}"" ,
+  ""isMarginTrade"": {isMarginTrade.ToString().ToLower()}
 }}");
                     Console.WriteLine("Alert message set.");
                     Thread.Sleep(4000);

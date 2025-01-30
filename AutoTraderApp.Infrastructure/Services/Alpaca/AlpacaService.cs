@@ -3,13 +3,16 @@ using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Position = AutoTraderApp.Domain.Entities.Position;
 
 
@@ -154,7 +157,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                 await _brokerLog.AddAsync(new BrokerLog
                 {
                     BrokerAccountId = brokerAccountId,
-                    Symbol=orderResponse.Symbol,
+                    Symbol = orderResponse.Symbol,
                     Price = Convert.ToDecimal(orderResponse.LimitPrice),
                     Quantity = Convert.ToInt16(orderResponse.Quantity),
                     Message = $"Yeni emir oluşturuldu: {orderRequest.Side}"
@@ -281,8 +284,8 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
             if (position == null)
                 return new List<PositionResponse>();
 
-            return position.Select(position => new PositionResponse   
-            {     
+            return position.Select(position => new PositionResponse
+            {
                 BrokerAccountId = brokerAccountId,
                 Symbol = position.Symbol,
                 Quantity = position.Quantity,
@@ -354,7 +357,7 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
 
         public async Task<IResult> ClosePositionAsync(Guid brokerAccountId, string symbol)
         {
-          
+
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
 
             try

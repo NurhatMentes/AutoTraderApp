@@ -8,6 +8,7 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.DTOs
 {
     public class UserTradingSettingsDto
     {
+        public string UserName { get; set; }
         public string BrokerType { get; set; }
         public decimal RiskPercentage { get; set; }
         public decimal MaxRiskLimit { get; set; }

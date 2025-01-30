@@ -60,8 +60,6 @@ public static class Messages
         public const string PositionNotFound = "Pozisyon bulunamadı";
         public const string InsufficientBalance = "Yetersiz bakiye";
         public const string InvalidAmount = "Geçersiz miktar";
-<<<<<<< Updated upstream
-=======
         public const string MarketClosed = "Borsa saatleri dışında sinyal işlenemez";
         public const string DayOfWeekMarketClosed = "Hafta sonları sinyal işlenemez";
         public const string InvalidBrokerAccount = "Geçerli bir broker hesabı bulunamadı";
@@ -79,8 +77,6 @@ public static class Messages
         public const string OrderRetryFailed = "İşlem tekrar denemesi başarısız oldu";
         public const string BuyingPower = "Alım Gücü";
         public const string PriceNotFound = "Binance fiyat verisi alınamadı";
-
->>>>>>> Stashed changes
     }
 
     public static class BrokerAccount

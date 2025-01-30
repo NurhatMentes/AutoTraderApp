@@ -8,14 +8,15 @@ public class TradingViewSignalValidator : AbstractValidator<TradingViewSignalDto
     public TradingViewSignalValidator()
     {
         RuleFor(x => x.Symbol)
-            .NotEmpty().WithMessage("Sembol boş olamaz.");
+            .NotEmpty().WithMessage("Sembol alanı boş olamaz.")
+            .Length(3, 10).WithMessage("Sembol uzunluğu 3 ile 10 karakter arasında olmalıdır.");
 
         RuleFor(x => x.Action)
-            .NotEmpty().WithMessage("İşlem türü boş olamaz.")
+            .NotEmpty().WithMessage("Aksiyon alanı boş olamaz.")
             .Must(action => action.ToUpper() == "BUY" || action.ToUpper() == "SELL")
-            .WithMessage("İşlem türü yalnızca BUY veya SELL olabilir.");
+            .WithMessage("Aksiyon yalnızca 'Al' veya 'Sat' olabilir.");
 
         RuleFor(x => x.Quantity)
-            .GreaterThan(0).WithMessage("Miktar 0'dan büyük olmalıdır.");
+            .GreaterThan(0).WithMessage("Miktar sıfırdan büyük olmalıdır.");
     }
 }

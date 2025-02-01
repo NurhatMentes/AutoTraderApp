@@ -26,7 +26,6 @@ namespace AutoTraderApp.Application.Features.CustomStocks.Commands
             if (stock != null)
             {
                 stock.Symbol = request.Dto.Symbol;
-                stock.UpdatedByUserId = request.Dto.UpdatedByUserId;
                 stock.UpdatedAt = DateTime.UtcNow;
 
                 await _repository.UpdateAsync(stock);

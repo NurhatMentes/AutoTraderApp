@@ -211,6 +211,8 @@ public class TradingViewSelenium : ITradingViewSeleniumService
                     Console.WriteLine("Alert created successfully.");
                 });
 
+
+                _driver.Navigate().Refresh();
                 return true;
             }
             catch (Exception ex)

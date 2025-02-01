@@ -24,7 +24,6 @@ namespace AutoTraderApp.Application.Features.CustomStocks.Commands
             var stock = new CustomStock
             {
                 Symbol = request.Dto.Symbol,
-                CreatedByUserId = request.Dto.CreatedByUserId
             };
 
             await _repository.AddAsync(stock);

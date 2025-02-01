@@ -18,11 +18,13 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
         private readonly ConcurrentDictionary<Guid, HttpClient> _httpClientCache = new();
+        private readonly IBaseRepository<BrokerLog> _brokerLog;
 
-        public BinanceService(IHttpClientFactory httpClientFactory, IBaseRepository<BrokerAccount> brokerAccountRepository)
+        public BinanceService(IHttpClientFactory httpClientFactory, IBaseRepository<BrokerAccount> brokerAccountRepository, IBaseRepository<BrokerLog> brokerLog)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _brokerAccountRepository = brokerAccountRepository ?? throw new ArgumentNullException(nameof(brokerAccountRepository));
+            _brokerLog = brokerLog;
         }
 
         private async Task<HttpClient> ConfigureHttpClientAsync(Guid brokerAccountId)
@@ -53,6 +55,22 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             byte[] signatureBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(queryString));
             return BitConverter.ToString(signatureBytes).Replace("-", "").ToLower();
         }
+
+        public async Task<bool> BinanceLog(Guid brokerAccountId, string symbol, string? Action, decimal? price, int? quantity, string msg)
+        {
+            await _brokerLog.AddAsync(new BrokerLog
+            {
+                BrokerAccountId = brokerAccountId,
+                Message ="(Binance) " + msg,
+                Symbol = symbol,
+                Price = price,
+                Quantity = quantity,
+                Action = Action
+            });
+
+            return true;
+        }
+
 
         public async Task<decimal> GetAccountBalanceAsync(Guid brokerAccountId)
         {
@@ -112,7 +130,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             return totalBalanceInUSDT;
         }
 
-
         public async Task<decimal> GetMarketPriceAsync(string symbol, Guid brokerAccountId)
         {
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
@@ -134,7 +151,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
 
             return price;
         }
-
 
         public async Task<BrokerAccount?> GetBinanceAccountAsync(Guid brokerAccountId)
         {
@@ -482,13 +498,10 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             var signature = GenerateSignature(queryString, brokerAccount.ApiSecret);
             queryString += $"&signature={signature}";
 
-            Console.WriteLine($"Request Parameters: {queryString}");
-
             string endpoint = isMarginTrade ? "/sapi/v1/margin/order" : "/api/v3/order"; 
             var response = await httpClient.PostAsync(endpoint + "?" + queryString, null);
             var responseContent = await response.Content.ReadAsStringAsync();
 
-            Console.WriteLine($"Binance API Response: {response.StatusCode} - {responseContent}");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -503,7 +516,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
-            // Get current market price
             var currentPrice = await GetMarketPriceAsync(symbol, brokerAccountId);
             if (currentPrice <= 0)
                 throw new Exception($"Could not get current market price for {symbol}");
@@ -512,7 +524,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             if (symbolInfo == null)
                 throw new Exception($"Could not get exchange info for {symbol}");
 
-            // Extract all required filters
             var priceFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "PRICE_FILTER");
             var minNotionalFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "NOTIONAL");
             var percentPriceFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "PERCENT_PRICE_BY_SIDE");
@@ -520,34 +531,28 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             if (priceFilter == null || minNotionalFilter == null || percentPriceFilter == null)
                 throw new Exception($"Missing price filters for {symbol}");
 
-            // Parse filter values with proper decimal culture
             decimal tickSize = decimal.Parse(priceFilter.TickSize, CultureInfo.InvariantCulture);
             decimal minPrice = decimal.Parse(priceFilter.MinPrice, CultureInfo.InvariantCulture);
             decimal maxPrice = decimal.Parse(priceFilter.MaxPrice, CultureInfo.InvariantCulture);
             decimal minNotional = decimal.Parse(minNotionalFilter.MinNotional, CultureInfo.InvariantCulture);
 
-            // Adjust stop loss price to proper tick size
             var tickSizeDecimals = BitConverter.GetBytes(decimal.GetBits(tickSize)[3])[2];
             stopLossPrice = Math.Round(stopLossPrice / tickSize, 0, MidpointRounding.ToPositiveInfinity) * tickSize;
             stopLossPrice = decimal.Round(stopLossPrice, tickSizeDecimals);
 
-            // Ensure price is within allowed range
             stopLossPrice = Math.Max(minPrice, Math.Min(maxPrice, stopLossPrice));
 
-            // Check if price would trigger immediately
             if (stopLossPrice >= currentPrice)
             {
                 stopLossPrice = decimal.Round(currentPrice * 0.99m / tickSize, 0, MidpointRounding.ToPositiveInfinity) * tickSize;
             }
 
-            // Calculate and check notional value
             decimal orderValue = stopLossPrice * quantity;
             if (orderValue < minNotional)
             {
                 throw new Exception($"Order value ({orderValue}) is below minimum notional value ({minNotional})");
             }
 
-            // Format values with proper precision
             var formattedQuantity = quantity.ToString($"F{tickSizeDecimals}", CultureInfo.InvariantCulture);
             var formattedStopLossPrice = stopLossPrice.ToString($"F{tickSizeDecimals}", CultureInfo.InvariantCulture);
             var formattedLimitPrice = stopLossPrice.ToString($"F{tickSizeDecimals}", CultureInfo.InvariantCulture);
@@ -610,14 +615,11 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             decimal minPrice = decimal.Parse(priceFilter.MinPrice, CultureInfo.InvariantCulture);
             decimal maxPrice = decimal.Parse(priceFilter.MaxPrice, CultureInfo.InvariantCulture);
 
-            // Get decimal places from tick size
             var tickSizeDecimals = BitConverter.GetBytes(decimal.GetBits(tickSize)[3])[2];
 
-            // Round to valid tick size
             var adjustedPrice = Math.Round(price / tickSize, 0, MidpointRounding.ToPositiveInfinity) * tickSize;
             adjustedPrice = decimal.Round(adjustedPrice, tickSizeDecimals);
 
-            // Ensure price is within allowed range
             adjustedPrice = Math.Max(minPrice, Math.Min(maxPrice, adjustedPrice));
 
             return adjustedPrice;
@@ -985,8 +987,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             }
 
             var json = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("Binance API Yanıtı:");
-            Console.WriteLine(json);
 
             var exchangeInfo = JsonConvert.DeserializeObject<BinanceExchangeInfo>(json);
 
@@ -1020,7 +1020,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             {
                 adjustedQuantity = Math.Floor(requestedQuantity / stepSize) * stepSize;
 
-                // **Eğer hesaplanan miktar minQty'den küçükse hata döndür**
                 if (adjustedQuantity < minQty)
                 {
                     throw new Exception($"[UYARI] Yetersiz bakiye: {requestedQuantity}. Minimum LOT_SIZE: {minQty}. Satış yapılamaz.");
@@ -1038,7 +1037,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
                 adjustedQuantity = Math.Ceiling(minNotional / price / stepSize) * stepSize;
             }
 
-            // **Eğer hesaplanan miktar 0 veya negatifse hata döndür**
             if (adjustedQuantity <= 0)
             {
                 throw new Exception($"[UYARI] Geçersiz miktar: {adjustedQuantity}. LOT_SIZE: {stepSize}, MinNotional: {minNotional}");
@@ -1046,8 +1044,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
 
             return adjustedQuantity;
         }
-
-
 
         public async Task<BinancePosition?> GetCryptoPositionAsync(string symbol, Guid brokerAccountId)
         {

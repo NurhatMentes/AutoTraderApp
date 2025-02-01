@@ -5,7 +5,9 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
+using AutoTraderApp.Infrastructure.Services.Alpaca;
 using MediatR;
+using System.Diagnostics;
 using System.Globalization;
 
 namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessTradingViewSignal
@@ -60,7 +62,10 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                 var minNotionalFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "NOTIONAL");
 
                 if (lotSizeFilter == null || minNotionalFilter == null)
+                {
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.FilterNotFound);
                     return new ErrorResult(Messages.Trading.FilterNotFound);
+                }
 
                 decimal minQty = decimal.Parse(lotSizeFilter.MinQty, CultureInfo.InvariantCulture);
                 decimal minNotional = decimal.Parse(minNotionalFilter.MinNotional, CultureInfo.InvariantCulture);
@@ -69,10 +74,12 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
 
                 if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase))
                 {
-                    // **Mevcut pozisyonu al**
                     var position = await _binanceService.GetCryptoPositionAsync(signal.Symbol, brokerAccount.Id);
                     if (position == null || position.Quantity <= 0)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.FilterNotFound);
                         return new ErrorResult(Messages.Trading.NoPositionToSell);
+                    }
 
                     decimal sellQuantity = position.Quantity;
 
@@ -91,18 +98,23 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     var existingStopLossOrder = await _binanceService.CheckExistingStopLossOrderAsync(brokerAccount.Id, signal.Symbol);
                     if (existingStopLossOrder)
                     {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"⚠️ {signal.Symbol} için aktif bir Stop Loss emri var. Satış işlemi gerçekleştirilemez.");
                         return new ErrorResult($"⚠️ {signal.Symbol} için aktif bir Stop Loss emri var. Satış işlemi gerçekleştirilemez.");
                     }
 
                     if (sellQuantity < minQtySell)
                     {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), $"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
                         return new ErrorResult($"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
                     }
 
                     sellQuantity = Math.Floor(sellQuantity / stepSizeSell) * stepSizeSell;
 
                     if (sellQuantity * cryptoPrice < minNotionalSell)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"⚠️ İşlem tutarı çok düşük. Minimum {minNotionalSell} USDT değerinde işlem yapılmalı.");
                         return new ErrorResult($"⚠️ İşlem tutarı çok düşük. Minimum {minNotionalSell} USDT değerinde işlem yapılmalı.");
+                    }
 
                     // **MARKET ORDER ile direkt satış yap**
                     var sellOrderResult = await _binanceService.PlaceOrderAsync(
@@ -114,13 +126,17 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     );
 
                     if (!sellOrderResult)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), Messages.Trading.OrderFailed);
                         return new ErrorResult(Messages.Trading.OrderFailed);
+                    }
 
                     await _telegramBotService.SendMessageAsync(
                         signal.UserId.ToString(),
                         $"✅ **Satış tamamlandı:** {signal.Symbol}, **Miktar:** {sellQuantity} USDT"
                     );
 
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), Messages.General.Success);
                     return new SuccessResult(Messages.General.Success);
                 }
 
@@ -129,7 +145,10 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     // **BUY işlemi için hesaplamalar**
                     var accountBalance = await _binanceService.GetAccountBalanceAsync(brokerAccount.Id);
                     if (accountBalance <= 0)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.PriceNotFound);
                         return new ErrorResult(Messages.Trading.PriceNotFound);
+                    }
 
                     calculatedQuantity = QuantityCalculator.CalculateCryptoQuantity(
                         accountBalance,
@@ -155,7 +174,10 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                             * decimal.Parse(lotSizeFilter.StepSize, CultureInfo.InvariantCulture);
 
                         if (minRequiredQty * cryptoPrice > accountBalance)
+                        {
+                            await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"Yetersiz bakiye. Minimum {minNotional} USDT değerinde işlem yapılmalı.");
                             return new ErrorResult($"Yetersiz bakiye. Minimum {minNotional} USDT değerinde işlem yapılmalı.");
+                        }
 
                         calculatedQuantity = minRequiredQty;
                     }
@@ -169,7 +191,10 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     );
 
                     if (!buyOrderResult)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.OrderFailed);
                         return new ErrorResult(Messages.Trading.OrderFailed);
+                    }
 
                     // **BUY işleminden sonra STOP-LOSS emri girilmeli**
                     decimal stopLossPrice = cryptoPrice * (1 - (userTradingSettings.SellPricePercentage / 100));
@@ -195,18 +220,22 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     );
 
                     if (!stopLossResult)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(calculatedQuantity), Messages.Trading.StopLossOrderFailed);
                         return new ErrorResult(Messages.Trading.StopLossOrderFailed);
+                    }
 
                     await _telegramBotService.SendMessageAsync(
                         signal.UserId.ToString(),
                         $"🟢 Alım tamamlandı: {signal.Symbol}, Miktar: {calculatedQuantity} USDT. Stop-loss {stopLossPrice} olarak ayarlandı."
                     );
-
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(calculatedQuantity), Messages.General.Success);
                     return new SuccessResult(Messages.General.Success);
                 }
             }
             catch (Exception ex)
             {
+                await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"{Messages.General.SystemError}: {ex.Message}");
                 return new ErrorResult($"{Messages.General.SystemError}: {ex.Message}");
             }
         }

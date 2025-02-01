@@ -4,6 +4,5 @@
     {
         public Guid Id { get; set; }
         public string Symbol { get; set; }
-        public Guid UpdatedByUserId { get; set; }
     }
 }

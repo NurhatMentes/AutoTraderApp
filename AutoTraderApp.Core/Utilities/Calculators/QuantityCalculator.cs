@@ -62,7 +62,12 @@ namespace AutoTraderApp.Core.Utilities.Calculators
             return quantity > 0 ? quantity : 1;
         }
 
-        public static decimal CalculateCryptoQuantity(decimal accountBalance, decimal riskPercentage, decimal cryptoPrice, decimal maxRiskLimit)
+        public static decimal CalculateCryptoQuantity(
+           decimal accountBalance,
+           decimal riskPercentage,
+           decimal cryptoPrice,
+           decimal maxRiskLimit,
+           decimal maxBuyQuantity)
         {
             decimal riskAmount = accountBalance * riskPercentage;
 
@@ -71,14 +76,15 @@ namespace AutoTraderApp.Core.Utilities.Calculators
                 riskAmount = maxRiskLimit;
             }
 
-            if (cryptoPrice <= 0)
-            {
-                throw new Exception("Geçersiz kripto fiyatı.");
-            }
-
             decimal quantity = riskAmount / cryptoPrice;
+
+            if (quantity > maxBuyQuantity)
+            {
+                quantity = maxBuyQuantity;
+            }
 
             return Math.Round(quantity, 8);
         }
+
     }
 }

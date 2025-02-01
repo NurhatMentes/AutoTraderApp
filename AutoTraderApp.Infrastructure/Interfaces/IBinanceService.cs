@@ -1,5 +1,6 @@
 ﻿using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Binance;
+using System;
 
 namespace AutoTraderApp.Infrastructure.Interfaces
 {
@@ -16,7 +17,10 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         Task<decimal> GetIsolatedMarginBalanceAsync(Guid brokerAccountId);
         Task<decimal> GetTotalBalanceAsync(Guid brokerAccountId);
         Task<bool> PlaceOrderAsync(Guid brokerAccountId, string symbol, decimal quantity, string action, bool isMarginTrade = false);
+        Task<bool> PlaceStopLossOrderAsync(Guid brokerAccountId, string symbol, decimal quantity, decimal stopLossPrice);
+        Task<decimal> AdjustPriceForBinance(string symbol, decimal stopLossPrice, decimal currentPrice, Guid brokerAccountId);
         Task<decimal> GetMinOrderSizeAsync(Guid brokerAccountId, string symbol);
+        Task<bool> CheckExistingStopLossOrderAsync(Guid brokerAccountId, string symbol);
         Task<string> GetAllOrdersBySymbolAsync(Guid brokerAccountId, string symbol);
         Task<string> GetTradeHistoryAsync(Guid brokerAccountId, string symbol);
         Task<string> PlaceMarginBuyOrderAsync(Guid brokerAccountId, string symbol, decimal quantity);
@@ -27,6 +31,9 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         Task<bool> ValidateUserByUIDAsync(Guid brokerAccountId, long expectedUID);
         Task<List<MarginOrderResponse>> GetMarginOrdersAsync(Guid brokerAccountId);
         Task<MarginBalanceResponse> GetMarginBalanceAsync(Guid brokerAccountId);
+        Task<BinanceSymbolInfo> GetExchangeInfoAsync(Guid brokerAccountId, string symbol);
+        Task<decimal> AdjustQuantityForBinance(string symbol, decimal requestedQuantity, decimal price, Guid brokerAccountId, bool isSellOrder);
+        Task<BinancePosition?> GetCryptoPositionAsync(string symbol, Guid brokerAccountId);
     }
 
 }

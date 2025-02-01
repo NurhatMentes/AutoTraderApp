@@ -77,6 +77,10 @@ public static class Messages
         public const string OrderRetryFailed = "İşlem tekrar denemesi başarısız oldu";
         public const string BuyingPower = "Alım Gücü";
         public const string PriceNotFound = "Binance fiyat verisi alınamadı";
+        public const string QuantityBelowMin = "İşlem için belirlenen miktar, minimum miktarın altında.";
+        public const string StopLossOrderFailed = "Stop-Loss emri verilirken bir hata oluştu.";
+        public const string SymbolNotFound = "Sembol bilgisi bulunamadı.";
+        public const string FilterNotFound = "Gerekli filtreler bulunamadı.";
     }
 
     public static class BrokerAccount

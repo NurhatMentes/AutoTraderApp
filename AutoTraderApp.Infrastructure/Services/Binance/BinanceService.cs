@@ -18,11 +18,13 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
         private readonly ConcurrentDictionary<Guid, HttpClient> _httpClientCache = new();
+        private readonly IBaseRepository<BrokerLog> _brokerLog;
 
-        public BinanceService(IHttpClientFactory httpClientFactory, IBaseRepository<BrokerAccount> brokerAccountRepository)
+        public BinanceService(IHttpClientFactory httpClientFactory, IBaseRepository<BrokerAccount> brokerAccountRepository, IBaseRepository<BrokerLog> brokerLog)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _brokerAccountRepository = brokerAccountRepository ?? throw new ArgumentNullException(nameof(brokerAccountRepository));
+            _brokerLog = brokerLog;
         }
 
         private async Task<HttpClient> ConfigureHttpClientAsync(Guid brokerAccountId)
@@ -54,6 +56,22 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             return BitConverter.ToString(signatureBytes).Replace("-", "").ToLower();
         }
 
+        public async Task<bool> BinanceLog(Guid brokerAccountId, string symbol, string? Action, decimal? price, int? quantity, string msg)
+        {
+            await _brokerLog.AddAsync(new BrokerLog
+            {
+                BrokerAccountId = brokerAccountId,
+                Message ="(Binance) " + msg,
+                Symbol = symbol,
+                Price = price,
+                Quantity = quantity,
+                Action = Action
+            });
+
+            return true;
+        }
+
+
         public async Task<decimal> GetAccountBalanceAsync(Guid brokerAccountId)
         {
             var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
@@ -81,11 +99,11 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
 
             foreach (var balance in accountData.Balances)
             {
-                if (balance.Free > 0)  
+                if (balance.Free > 0)
                 {
                     if (balance.Asset == "USDT")
                     {
-                        totalBalanceInUSDT += balance.Free; 
+                        totalBalanceInUSDT += balance.Free;
                     }
                     else
                     {
@@ -108,6 +126,7 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
                 }
             }
 
+            Console.WriteLine($"Toplam USDT Karşılığı: {totalBalanceInUSDT}");
             return totalBalanceInUSDT;
         }
 
@@ -132,7 +151,6 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
 
             return price;
         }
-
 
         public async Task<BrokerAccount?> GetBinanceAccountAsync(Guid brokerAccountId)
         {
@@ -480,13 +498,10 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             var signature = GenerateSignature(queryString, brokerAccount.ApiSecret);
             queryString += $"&signature={signature}";
 
-            Console.WriteLine($"Request Parameters: {queryString}");
-
             string endpoint = isMarginTrade ? "/sapi/v1/margin/order" : "/api/v3/order"; 
             var response = await httpClient.PostAsync(endpoint + "?" + queryString, null);
             var responseContent = await response.Content.ReadAsStringAsync();
 
-            Console.WriteLine($"Binance API Response: {response.StatusCode} - {responseContent}");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -494,6 +509,152 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             }
 
             return true;
+        }
+
+        public async Task<bool> PlaceStopLossOrderAsync(Guid brokerAccountId, string symbol, decimal quantity, decimal stopLossPrice)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+            var currentPrice = await GetMarketPriceAsync(symbol, brokerAccountId);
+            if (currentPrice <= 0)
+                throw new Exception($"Could not get current market price for {symbol}");
+
+            var symbolInfo = await GetExchangeInfoAsync(brokerAccountId, symbol);
+            if (symbolInfo == null)
+                throw new Exception($"Could not get exchange info for {symbol}");
+
+            var priceFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "PRICE_FILTER");
+            var minNotionalFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "NOTIONAL");
+            var percentPriceFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "PERCENT_PRICE_BY_SIDE");
+
+            if (priceFilter == null || minNotionalFilter == null || percentPriceFilter == null)
+                throw new Exception($"Missing price filters for {symbol}");
+
+            decimal tickSize = decimal.Parse(priceFilter.TickSize, CultureInfo.InvariantCulture);
+            decimal minPrice = decimal.Parse(priceFilter.MinPrice, CultureInfo.InvariantCulture);
+            decimal maxPrice = decimal.Parse(priceFilter.MaxPrice, CultureInfo.InvariantCulture);
+            decimal minNotional = decimal.Parse(minNotionalFilter.MinNotional, CultureInfo.InvariantCulture);
+
+            var tickSizeDecimals = BitConverter.GetBytes(decimal.GetBits(tickSize)[3])[2];
+            stopLossPrice = Math.Round(stopLossPrice / tickSize, 0, MidpointRounding.ToPositiveInfinity) * tickSize;
+            stopLossPrice = decimal.Round(stopLossPrice, tickSizeDecimals);
+
+            stopLossPrice = Math.Max(minPrice, Math.Min(maxPrice, stopLossPrice));
+
+            if (stopLossPrice >= currentPrice)
+            {
+                stopLossPrice = decimal.Round(currentPrice * 0.99m / tickSize, 0, MidpointRounding.ToPositiveInfinity) * tickSize;
+            }
+
+            decimal orderValue = stopLossPrice * quantity;
+            if (orderValue < minNotional)
+            {
+                throw new Exception($"Order value ({orderValue}) is below minimum notional value ({minNotional})");
+            }
+
+            var formattedQuantity = quantity.ToString($"F{tickSizeDecimals}", CultureInfo.InvariantCulture);
+            var formattedStopLossPrice = stopLossPrice.ToString($"F{tickSizeDecimals}", CultureInfo.InvariantCulture);
+            var formattedLimitPrice = stopLossPrice.ToString($"F{tickSizeDecimals}", CultureInfo.InvariantCulture);
+
+            var requestBody = new Dictionary<string, string>
+            {
+                ["symbol"] = symbol.ToUpper().Trim(),
+                ["side"] = "SELL",
+                ["type"] = "STOP_LOSS_LIMIT",
+                ["quantity"] = formattedQuantity,
+                ["price"] = formattedLimitPrice,
+                ["stopPrice"] = formattedStopLossPrice,
+                ["timeInForce"] = "GTC",
+                ["timestamp"] = timestamp,
+                ["recvWindow"] = "60000"
+            };
+
+            var queryString = string.Join("&", requestBody.Select(x => $"{x.Key}={Uri.EscapeDataString(x.Value)}"));
+
+            var brokerAccount = await GetBinanceAccountAsync(brokerAccountId);
+            if (brokerAccount == null)
+                throw new Exception("Broker account not found");
+
+            var signature = GenerateSignature(queryString, brokerAccount.ApiSecret);
+            queryString += $"&signature={signature}";
+
+            try
+            {
+                var response = await httpClient.PostAsync("/api/v3/order?" + queryString, null);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"Binance API Stop-Loss Order Error: {response.StatusCode} - {responseContent}");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to place stop-loss order: {ex.Message}");
+            }
+        }
+
+        public async Task<decimal> AdjustPriceForBinance(string symbol, decimal price, decimal currentPrice, Guid brokerAccountId)
+        {
+            var symbolInfo = await GetExchangeInfoAsync(brokerAccountId, symbol);
+            if (symbolInfo == null)
+            {
+                throw new Exception($"Binance price filter info not found: {symbol}");
+            }
+
+            var priceFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "PRICE_FILTER");
+            if (priceFilter == null)
+            {
+                throw new Exception($"Price filter not found for: {symbol}");
+            }
+
+            decimal tickSize = decimal.Parse(priceFilter.TickSize, CultureInfo.InvariantCulture);
+            decimal minPrice = decimal.Parse(priceFilter.MinPrice, CultureInfo.InvariantCulture);
+            decimal maxPrice = decimal.Parse(priceFilter.MaxPrice, CultureInfo.InvariantCulture);
+
+            var tickSizeDecimals = BitConverter.GetBytes(decimal.GetBits(tickSize)[3])[2];
+
+            var adjustedPrice = Math.Round(price / tickSize, 0, MidpointRounding.ToPositiveInfinity) * tickSize;
+            adjustedPrice = decimal.Round(adjustedPrice, tickSizeDecimals);
+
+            adjustedPrice = Math.Max(minPrice, Math.Min(maxPrice, adjustedPrice));
+
+            return adjustedPrice;
+        }
+
+        public async Task<bool> CheckExistingStopLossOrderAsync(Guid brokerAccountId, string symbol)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+            var requestBody = new Dictionary<string, string>
+            {
+                ["symbol"] = symbol.ToUpper().Trim(),
+                ["timestamp"] = timestamp,
+                ["recvWindow"] = "60000"
+            };
+
+            var queryString = string.Join("&", requestBody.Select(x => $"{x.Key}={Uri.EscapeDataString(x.Value)}"));
+
+            var brokerAccount = await GetBinanceAccountAsync(brokerAccountId);
+            if (brokerAccount == null)
+                throw new Exception("Broker account not found");
+
+            var signature = GenerateSignature(queryString, brokerAccount.ApiSecret);
+            queryString += $"&signature={signature}";
+
+            var response = await httpClient.GetAsync($"/api/v3/openOrders?{queryString}");
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+                throw new Exception($"Binance API Error: {response.StatusCode} - {responseContent}");
+
+            var orders = JsonConvert.DeserializeObject<List<BinanceOrder>>(responseContent);
+
+            return orders.Any(o => o.Symbol == symbol && o.Type == "STOP_LOSS_LIMIT");
         }
 
         public async Task<decimal> GetMinOrderSizeAsync(Guid brokerAccountId, string symbol)
@@ -807,13 +968,116 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
             }
         }
                 
-
         public async Task<bool> ValidateUserByUIDAsync(Guid brokerAccountId, long expectedUID)
         {
             var uid = await GetBinanceUIDAsync(brokerAccountId);
             if (uid == null) return false;
 
             return uid == expectedUID;
+        }
+
+        public async Task<BinanceSymbolInfo> GetExchangeInfoAsync(Guid brokerAccountId,string symbol)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var response = await httpClient.GetAsync($"api/v3/exchangeInfo?symbol={symbol}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception("Binance Exchange Info alınamadı.");
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var exchangeInfo = JsonConvert.DeserializeObject<BinanceExchangeInfo>(json);
+
+            return exchangeInfo.Symbols.FirstOrDefault(s => s.Symbol == symbol);
+        }
+
+        public async Task<decimal> AdjustQuantityForBinance(string symbol, decimal requestedQuantity, decimal price, Guid brokerAccountId, bool isSellOrder)
+        {
+            var symbolInfo = await GetExchangeInfoAsync(brokerAccountId, symbol);
+            if (symbolInfo == null)
+            {
+                throw new Exception($"Binance LOT_SIZE bilgisi alınamadı: {symbol}");
+            }
+
+            var lotSizeFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "LOT_SIZE");
+            var minNotionalFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "NOTIONAL");
+
+            if (lotSizeFilter == null || (minNotionalFilter == null && !isSellOrder))
+            {
+                throw new Exception($"Binance LOT_SIZE veya MIN_NOTIONAL bilgisi eksik: {symbol}");
+            }
+
+            decimal minQty = decimal.Parse(lotSizeFilter.MinQty, CultureInfo.InvariantCulture);
+            decimal stepSize = decimal.Parse(lotSizeFilter.StepSize, CultureInfo.InvariantCulture);
+            decimal minNotional = minNotionalFilter != null ? decimal.Parse(minNotionalFilter.MinNotional, CultureInfo.InvariantCulture) : 0;
+
+            decimal adjustedQuantity = requestedQuantity;
+
+            // **SELL İşlemi: Elde ne varsa sat, min LOT_SIZE şartını sağla**
+            if (isSellOrder)
+            {
+                adjustedQuantity = Math.Floor(requestedQuantity / stepSize) * stepSize;
+
+                if (adjustedQuantity < minQty)
+                {
+                    throw new Exception($"[UYARI] Yetersiz bakiye: {requestedQuantity}. Minimum LOT_SIZE: {minQty}. Satış yapılamaz.");
+                }
+
+                return adjustedQuantity;
+            }
+
+            // **BUY İşlemi: LOT_SIZE ve NOTIONAL kontrolü yap**
+            adjustedQuantity = Math.Floor(requestedQuantity / stepSize) * stepSize;
+            decimal totalValue = adjustedQuantity * price;
+
+            if (totalValue < minNotional)
+            {
+                adjustedQuantity = Math.Ceiling(minNotional / price / stepSize) * stepSize;
+            }
+
+            if (adjustedQuantity <= 0)
+            {
+                throw new Exception($"[UYARI] Geçersiz miktar: {adjustedQuantity}. LOT_SIZE: {stepSize}, MinNotional: {minNotional}");
+            }
+
+            return adjustedQuantity;
+        }
+
+        public async Task<BinancePosition?> GetCryptoPositionAsync(string symbol, Guid brokerAccountId)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+            var queryString = $"timestamp={timestamp}&recvWindow=60000";
+            var brokerAccount = await GetBinanceAccountAsync(brokerAccountId);
+            if (brokerAccount == null) throw new Exception("Broker account not found");
+
+            var signature = GenerateSignature(queryString, brokerAccount.ApiSecret);
+            queryString += $"&signature={signature}";
+
+            var response = await httpClient.GetAsync($"/api/v3/account?{queryString}");
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Binance API Hata: {response.StatusCode} - {responseContent}");
+            }
+
+            var accountData = JsonConvert.DeserializeObject<BinanceAccountResponse>(responseContent);
+            if (accountData?.Balances == null)
+                return null;
+
+            var asset = accountData.Balances.FirstOrDefault(b => b.Asset == symbol.Replace("USDT", ""));
+            if (asset == null || asset.Free <= 0)
+                return null;
+
+            return new BinancePosition
+            {
+                Symbol = symbol,
+                Quantity = asset.Free
+            };
         }
     }
 }

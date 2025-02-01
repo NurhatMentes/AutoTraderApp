@@ -31,6 +31,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         private readonly ITradingViewSeleniumService _tradingViewSeleniumService;
         private readonly IBaseRepository<NasdaqStock> _nasdaqStockRepository;
         private readonly IBaseRepository<CustomStock> _customStockRepository;
+        private readonly IBaseRepository<CryptoCustomStock> _cryptoCustomStockRepository;
 
         public ApplyStrategyToMultipleStocksSyncCommandHandler(
             IBaseRepository<Strategy> strategyRepository,
@@ -43,7 +44,8 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             IMediator mediator,
             ITradingViewSeleniumService tradingViewSeleniumService,
             IBaseRepository<NasdaqStock> nasdaqStockRepository,
-            IBaseRepository<CustomStock> customStockRepository)
+            IBaseRepository<CustomStock> customStockRepository,
+            IBaseRepository<CryptoCustomStock> cryptoCustomStockRepository)
         {
             _strategyRepository = strategyRepository;
             _automationService = automationService;
@@ -56,6 +58,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             _tradingViewSeleniumService = tradingViewSeleniumService;
             _nasdaqStockRepository = nasdaqStockRepository;
             _customStockRepository = customStockRepository;
+            _cryptoCustomStockRepository = cryptoCustomStockRepository;
         }
 
         public Task<IResult> Handle(ApplyStrategyToMultipleStocksSyncCommand request, CancellationToken cancellationToken)
@@ -105,6 +108,12 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             {
                 return new ErrorResult(Messages.General.DataNotFound);
             }
+
+            var cryptoCustomStocks = _cryptoCustomStockRepository.GetAllAsync().Result;
+            if (cryptoCustomStocks == null)
+            {
+                return new ErrorResult(Messages.General.DataNotFound);
+            }
             //**********//
 
             //**********//Kontroller//**********//
@@ -115,22 +124,20 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
                 return new ErrorResult(Messages.Strategy.NotFound);
 
             // Broker hesabı doğrulaması
-            var brokerAccount = _brokerAccountRepository.GetAsync(b => b.Id == request.BrokerAccountId && b.UserId == request.UserId).Result;
+            var brokerAccount = _brokerAccountRepository.GetAsync(b => b.Id == request.BrokerAccountId && b.UserId == request.UserId && b.BrokerType=="Kripto").Result;
             if (brokerAccount == null)
                 return new ErrorResult(Messages.BrokerAccount.NotFound);
 
             // Alpaca hesabı doğrulaması
-            var account = _alpacaService.GetAccountInfoAsync(brokerAccount.Id).Result;
-            if (account == null)
-                return new ErrorResult(Messages.Trading.AccountInfoNotFound);
-            //**********//
+            //var account = _alpacaService.GetAccountInfoAsync(brokerAccount.Id).Result;
+            //if (account == null)
+            //    return new ErrorResult(Messages.Trading.AccountInfoNotFound);
 
-            decimal accountValue = account.Equity;
-            Console.WriteLine($"---------------Hesap değeri: {accountValue}");
 
             //**********//Alert Oluşturma//**********//
 
-            foreach (var stock in customStocks)
+
+            foreach (var stock in cryptoCustomStocks)
             {
                 Console.WriteLine($"---------------Seçilen hisse: {stock.Symbol}");
 

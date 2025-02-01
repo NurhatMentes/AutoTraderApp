@@ -3,6 +3,5 @@
     public class CreateCustomStockDto
     {
         public string Symbol { get; set; }
-        public Guid CreatedByUserId { get; set; }
     }
 }

@@ -5,7 +5,10 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
+using AutoTraderApp.Infrastructure.Services.Alpaca;
 using MediatR;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessTradingViewSignal
 {
@@ -19,7 +22,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
         private readonly IBinanceService _binanceService;
         private readonly ITelegramBotService _telegramBotService;
-        IBaseRepository<UserTradingSetting> _userTradingSetting;
+        private readonly IBaseRepository<UserTradingSetting> _userTradingSetting;
 
         public CryptoProcessTradingViewSignalCommandHandler(
             IBaseRepository<BrokerAccount> brokerAccountRepository,
@@ -39,60 +42,202 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
 
             try
             {
-                // Broker hesabını kontrol et
-                var brokerAccount = await _brokerAccountRepository.GetAsync(b => b.Id == signal.BrokerAccountId && b.UserId == signal.UserId);
-                if (brokerAccount == null || brokerAccount.BrokerName != "Binance")
+                var brokerAccount = await _brokerAccountRepository.GetAsync(b => b.Id == signal.BrokerAccountId && b.UserId == signal.UserId && b.BrokerName == "Binance");
+                if (brokerAccount == null)
                     return new ErrorResult(Messages.Trading.InvalidBrokerAccount);
 
-                // Kullanıcının trading ayarlarını getir
-                var userTradingSettings = await _userTradingSetting.GetAsync(uts => uts.UserId == signal.UserId);
+                var userTradingSettings = await _userTradingSetting.GetAsync(uts => uts.UserId == signal.UserId && uts.BrokerType == "Kripto");
                 if (userTradingSettings == null)
                     return new ErrorResult(Messages.General.DataNotFound);
 
-                // Binance fiyatını getir**
-                var latestPrice = await _binanceService.GetMarketPriceAsync(signal.Symbol, brokerAccount.Id);
-                if (latestPrice <= 0)
+                var cryptoPrice = await _binanceService.GetMarketPriceAsync(signal.Symbol, brokerAccount.Id);
+                if (cryptoPrice <= 0)
                     return new ErrorResult(Messages.Trading.PriceNotFound);
 
-                // Kullanıcının Binance hesap bakiyesini getir*
-                var accountBalance = await _binanceService.GetAccountBalanceAsync(brokerAccount.Id);
-                if (accountBalance <= 0)
-                    return new ErrorResult(Messages.Trading.InsufficientBalance);
+                var symbolInfo = await _binanceService.GetExchangeInfoAsync(brokerAccount.Id, signal.Symbol);
+                if (symbolInfo == null)
+                    return new ErrorResult(Messages.Trading.SymbolNotFound);
 
-                // Kullanıcının risk oranına göre otomatik işlem miktarını belirle**
-                var calculatedQuantity = QuantityCalculator.CalculateCryptoQuantity(
-                    accountBalance,
-                    userTradingSettings.RiskPercentage,
-                    latestPrice,
-                    userTradingSettings.MaxRiskLimit
-                );
+                var lotSizeFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "LOT_SIZE");
+                var minNotionalFilter = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "NOTIONAL");
 
-                // Eğer hesaplanan miktar sıfır veya geçersizse hata döndür
-                if (calculatedQuantity <= 0)
-                    return new ErrorResult(Messages.Trading.InvalidAmount);
+                if (lotSizeFilter == null || minNotionalFilter == null)
+                {
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.FilterNotFound);
+                    return new ErrorResult(Messages.Trading.FilterNotFound);
+                }
 
-                var orderResult = await _binanceService.PlaceOrderAsync(
-                    brokerAccount.Id,
-                    signal.Symbol,
-                    calculatedQuantity, 
-                    signal.Action,
-                    signal.IsMarginTrade
-                );
+                decimal minQty = decimal.Parse(lotSizeFilter.MinQty, CultureInfo.InvariantCulture);
+                decimal minNotional = decimal.Parse(minNotionalFilter.MinNotional, CultureInfo.InvariantCulture);
 
-                if (!orderResult)
-                    return new ErrorResult(Messages.Trading.OrderFailed);
+                decimal calculatedQuantity = 0;
 
-                // Telegram bildirimi gönder
-                await _telegramBotService.SendMessageAsync(signal.UserId.ToString(),
-                    $"Başarılı işlem: {signal.Action} {signal.Symbol}, Miktar: {calculatedQuantity} {(signal.IsMarginTrade ? "(Margin)" : "(Spot)")}");
+                if (signal.Action.Equals("SELL", StringComparison.OrdinalIgnoreCase))
+                {
+                    var position = await _binanceService.GetCryptoPositionAsync(signal.Symbol, brokerAccount.Id);
+                    if (position == null || position.Quantity <= 0)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.FilterNotFound);
+                        return new ErrorResult(Messages.Trading.NoPositionToSell);
+                    }
 
-                return new SuccessResult(Messages.General.Success);
+                    decimal sellQuantity = position.Quantity;
+
+                    // **LOT_SIZE ve MinNotional filtrelerini al**
+                    var lotSizeFilterSell = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "LOT_SIZE");
+                    var minNotionalFilterSell = symbolInfo.Filters.FirstOrDefault(f => f.FilterType == "NOTIONAL");
+
+                    if (lotSizeFilterSell == null || minNotionalFilterSell == null)
+                        return new ErrorResult("Gerekli Binance filtreleri bulunamadı.");
+
+                    decimal minQtySell = decimal.Parse(lotSizeFilterSell.MinQty, CultureInfo.InvariantCulture);
+                    decimal stepSizeSell = decimal.Parse(lotSizeFilterSell.StepSize, CultureInfo.InvariantCulture);
+                    decimal minNotionalSell = decimal.Parse(minNotionalFilterSell.MinNotional, CultureInfo.InvariantCulture);
+
+                    // **Mevcut stop loss emri var mı kontrol et**
+                    var existingStopLossOrder = await _binanceService.CheckExistingStopLossOrderAsync(brokerAccount.Id, signal.Symbol);
+                    if (existingStopLossOrder)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"⚠️ {signal.Symbol} için aktif bir Stop Loss emri var. Satış işlemi gerçekleştirilemez.");
+                        return new ErrorResult($"⚠️ {signal.Symbol} için aktif bir Stop Loss emri var. Satış işlemi gerçekleştirilemez.");
+                    }
+
+                    if (sellQuantity < minQtySell)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), $"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
+                        return new ErrorResult($"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
+                    }
+
+                    sellQuantity = Math.Floor(sellQuantity / stepSizeSell) * stepSizeSell;
+
+                    if (sellQuantity * cryptoPrice < minNotionalSell)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"⚠️ İşlem tutarı çok düşük. Minimum {minNotionalSell} USDT değerinde işlem yapılmalı.");
+                        return new ErrorResult($"⚠️ İşlem tutarı çok düşük. Minimum {minNotionalSell} USDT değerinde işlem yapılmalı.");
+                    }
+
+                    // **MARKET ORDER ile direkt satış yap**
+                    var sellOrderResult = await _binanceService.PlaceOrderAsync(
+                        brokerAccount.Id,
+                        signal.Symbol,
+                        sellQuantity,
+                        "SELL",
+                        signal.IsMarginTrade
+                    );
+
+                    if (!sellOrderResult)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), Messages.Trading.OrderFailed);
+                        return new ErrorResult(Messages.Trading.OrderFailed);
+                    }
+
+                    await _telegramBotService.SendMessageAsync(
+                        signal.UserId.ToString(),
+                        $"✅ **Satış tamamlandı:** {signal.Symbol}, **Miktar:** {sellQuantity} USDT"
+                    );
+
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), Messages.General.Success);
+                    return new SuccessResult(Messages.General.Success);
+                }
+
+                else
+                {
+                    // **BUY işlemi için hesaplamalar**
+                    var accountBalance = await _binanceService.GetAccountBalanceAsync(brokerAccount.Id);
+                    if (accountBalance <= 0)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.PriceNotFound);
+                        return new ErrorResult(Messages.Trading.PriceNotFound);
+                    }
+
+                    calculatedQuantity = QuantityCalculator.CalculateCryptoQuantity(
+                        accountBalance,
+                        userTradingSettings.RiskPercentage,
+                        cryptoPrice,
+                        userTradingSettings.MaxRiskLimit,
+                        userTradingSettings.MaxBuyQuantity
+                    );
+
+                    // **Binance LOT_SIZE uygunluğu kontrolü**
+                    calculatedQuantity = await _binanceService.AdjustQuantityForBinance(
+                        signal.Symbol,
+                        calculatedQuantity,
+                        cryptoPrice,
+                        brokerAccount.Id,
+                        false
+                    );
+
+                    // **MinNotional kontrolü**
+                    if (calculatedQuantity * cryptoPrice < minNotional)
+                    {
+                        decimal minRequiredQty = Math.Ceiling(minNotional / cryptoPrice / decimal.Parse(lotSizeFilter.StepSize, CultureInfo.InvariantCulture))
+                            * decimal.Parse(lotSizeFilter.StepSize, CultureInfo.InvariantCulture);
+
+                        if (minRequiredQty * cryptoPrice > accountBalance)
+                        {
+                            await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"Yetersiz bakiye. Minimum {minNotional} USDT değerinde işlem yapılmalı.");
+                            return new ErrorResult($"Yetersiz bakiye. Minimum {minNotional} USDT değerinde işlem yapılmalı.");
+                        }
+
+                        calculatedQuantity = minRequiredQty;
+                    }
+
+                    var buyOrderResult = await _binanceService.PlaceOrderAsync(
+                        brokerAccount.Id,
+                        signal.Symbol,
+                        calculatedQuantity,
+                        "BUY",
+                        signal.IsMarginTrade
+                    );
+
+                    if (!buyOrderResult)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.OrderFailed);
+                        return new ErrorResult(Messages.Trading.OrderFailed);
+                    }
+
+                    // **BUY işleminden sonra STOP-LOSS emri girilmeli**
+                    decimal stopLossPrice = cryptoPrice * (1 - (userTradingSettings.SellPricePercentage / 100));
+                    if (stopLossPrice >= cryptoPrice)
+                        stopLossPrice = cryptoPrice * 0.99m;
+
+                    stopLossPrice = await _binanceService.AdjustPriceForBinance(
+                        signal.Symbol,
+                        stopLossPrice,
+                        cryptoPrice,
+                        brokerAccount.Id
+                    );
+
+                    // **Stop Loss emrinin MinNotional sınırına uygun olması sağlanmalı**
+                    if (stopLossPrice * calculatedQuantity < minNotional)
+                        stopLossPrice = (minNotional / calculatedQuantity) * 1.01m;
+
+                    var stopLossResult = await _binanceService.PlaceStopLossOrderAsync(
+                        brokerAccount.Id,
+                        signal.Symbol,
+                        calculatedQuantity,
+                        stopLossPrice
+                    );
+
+                    if (!stopLossResult)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(calculatedQuantity), Messages.Trading.StopLossOrderFailed);
+                        return new ErrorResult(Messages.Trading.StopLossOrderFailed);
+                    }
+
+                    await _telegramBotService.SendMessageAsync(
+                        signal.UserId.ToString(),
+                        $"🟢 Alım tamamlandı: {signal.Symbol}, Miktar: {calculatedQuantity} USDT. Stop-loss {stopLossPrice} olarak ayarlandı."
+                    );
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(calculatedQuantity), Messages.General.Success);
+                    return new SuccessResult(Messages.General.Success);
+                }
             }
             catch (Exception ex)
             {
+                await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"{Messages.General.SystemError}: {ex.Message}");
                 return new ErrorResult($"{Messages.General.SystemError}: {ex.Message}");
             }
         }
-
     }
 }

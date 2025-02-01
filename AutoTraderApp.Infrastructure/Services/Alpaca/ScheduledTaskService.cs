@@ -120,7 +120,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                                 continue;
                             }
 
-                            // Mevcut pozisyonları kontrol et
                             var openPositions = await _alpacaService.GetPositionsAsync(brokerAccount.Id);
                             var existingPosition = openPositions.FirstOrDefault(p => p.Symbol == order.Symbol);
 
@@ -150,7 +149,6 @@ namespace AutoTraderApp.Infrastructure.Services.Alpaca
                                 decimal stopLossPrice = buyPrice * (1 - userTradingSettings.BuyPricePercentage / 100m);
                                 decimal stopLossPriceRounded = Math.Floor(stopLossPrice * 100) / 100;
 
-                                // OCO (One-Cancels-Other) order oluştur
                                 var ocoOrder = new OrderRequest
                                 {
                                     Symbol = order.Symbol,

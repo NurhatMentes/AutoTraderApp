@@ -52,7 +52,11 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
 
                 var cryptoPrice = await _binanceService.GetMarketPriceAsync(signal.Symbol, brokerAccount.Id);
                 if (cryptoPrice <= 0)
+                {
+                    Console.WriteLine($"****************SWMBOL {signal.Symbol} {cryptoPrice}");
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, cryptoPrice, null, "HATA: FİYAT BİLGİSİ BULUNAMADI");
                     return new ErrorResult(Messages.Trading.PriceNotFound);
+                }
 
                 var symbolInfo = await _binanceService.GetExchangeInfoAsync(brokerAccount.Id, signal.Symbol);
                 if (symbolInfo == null)
@@ -95,18 +99,25 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     decimal minNotionalSell = decimal.Parse(minNotionalFilterSell.MinNotional, CultureInfo.InvariantCulture);
 
                     // **Mevcut stop loss emri var mı kontrol et**
-                    var existingStopLossOrder = await _binanceService.CheckExistingStopLossOrderAsync(brokerAccount.Id, signal.Symbol);
-                    if (existingStopLossOrder)
+                    //var existingStopLossOrder = await _binanceService.CheckExistingStopLossOrderAsync(brokerAccount.Id, signal.Symbol);
+                    // **Mevcut Stop Loss emri var mı?**
+                    var existingStopLossOrder = await _binanceService.GetActiveStopLossOrderAsync(brokerAccount.Id, signal.Symbol);
+
+                    if (existingStopLossOrder != null)
                     {
-                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"⚠️ {signal.Symbol} için aktif bir Stop Loss emri var. Satış işlemi gerçekleştirilemez.");
-                        return new ErrorResult($"⚠️ {signal.Symbol} için aktif bir Stop Loss emri var. Satış işlemi gerçekleştirilemez.");
+                        var cancelResult = await _binanceService.CancelOrderAsync(brokerAccount.Id, signal.Symbol, existingStopLossOrder.OrderId.ToString());
+                        if (!cancelResult)
+                        {
+                            return new ErrorResult($"⚠️ {signal.Symbol} için aktif bir Stop Loss emri vardı ancak iptal edilemedi. Satış işlemi başarısız.");
+                        }
                     }
 
-                    if (sellQuantity < minQtySell)
-                    {
-                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), $"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
-                        return new ErrorResult($"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
-                    }
+
+                    //if (sellQuantity < minQtySell)
+                    //{
+                    //    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), $"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
+                    //    return new ErrorResult($"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
+                    //}
 
                     sellQuantity = Math.Floor(sellQuantity / stepSizeSell) * stepSizeSell;
 

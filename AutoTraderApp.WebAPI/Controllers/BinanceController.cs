@@ -29,6 +29,20 @@ namespace AutoTraderApp.API.Controllers
             }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetMarketPriceAsync(Guid brokerAccountId, string Symbol)
+        {
+            try
+            {
+                var accountInfo = await _binanceService.GetMarketPriceAsync(Symbol,brokerAccountId);
+                return Ok(new { success = true, data = accountInfo });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpGet("account/total/balance/{brokerAccountId}")]
         public async Task<IActionResult> GetTotalBalance(Guid brokerAccountId)
         {

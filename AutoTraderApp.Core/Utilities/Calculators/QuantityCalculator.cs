@@ -13,7 +13,14 @@ namespace AutoTraderApp.Core.Utilities.Calculators
         /// <param name="entryPrice">Giriş fiyatı.</param>
         /// <param name="stopLoss">Zararı durdurma fiyatı.</param>
         /// <returns>Alınabilecek hisse miktarı.</returns>
-        public static int StockCalculateQuantity(decimal accountValue, decimal riskPercentage, decimal entryPrice, decimal stopLoss, decimal maxBuyingPowerPercent, int minBuyQuantity, int maxBuyQuantity)
+        public static int StockCalculateQuantity(
+            decimal accountValue, 
+            decimal riskPercentage, 
+            decimal entryPrice, decimal stopLoss,
+            decimal maxBuyingPowerPercent, 
+            int minBuyQuantity, 
+            int maxBuyQuantity,
+            decimal minBuyPrice)
         {
             if (entryPrice <= stopLoss)
             {
@@ -30,16 +37,13 @@ namespace AutoTraderApp.Core.Utilities.Calculators
                 throw new ArgumentException("Stop-loss seviyesi giriş fiyatından büyük olamaz.");
             }
 
-            // Hesaplanan miktarı bul
             int quantity = (int)(Math.Floor(riskAmount / perUnitRisk));
 
-            // Toplam fiyatı hesapla
-            decimal totalPrice = quantity * entryPrice;
+            decimal totalPrice = quantity * entryPrice; 
 
-            // Eğer toplam fiyat 2500 doların altındaysa, miktarı artır
-            if (totalPrice < 2500)
+            if (totalPrice < minBuyPrice)
             {
-                quantity = (int)Math.Ceiling(2500 / entryPrice);
+                quantity = (int)Math.Ceiling(minBuyPrice / entryPrice);
             }
 
             // Maksimum alım gücüne göre miktarı sınırla
@@ -67,7 +71,8 @@ namespace AutoTraderApp.Core.Utilities.Calculators
            decimal riskPercentage,
            decimal cryptoPrice,
            decimal maxRiskLimit,
-           decimal maxBuyQuantity)
+           decimal maxBuyQuantity,
+           decimal minBuyPrice)
         {
             decimal riskAmount = accountBalance * riskPercentage;
 
@@ -81,6 +86,13 @@ namespace AutoTraderApp.Core.Utilities.Calculators
             if (quantity > maxBuyQuantity)
             {
                 quantity = maxBuyQuantity;
+            }
+
+            decimal totalPrice = quantity * cryptoPrice;
+
+            if (totalPrice < minBuyPrice)
+            {
+                quantity = Math.Ceiling(minBuyPrice / cryptoPrice);
             }
 
             return Math.Round(quantity, 8);

@@ -48,5 +48,6 @@ namespace AutoTraderApp.Domain.Entities
         public decimal BuyPricePercentage { get; set; } = 0.98m;
 
         public decimal SellPricePercentage { get; set; } = 0.98m;
+        public decimal MinBuyPrice { get; set; } = 30;
     }
 }

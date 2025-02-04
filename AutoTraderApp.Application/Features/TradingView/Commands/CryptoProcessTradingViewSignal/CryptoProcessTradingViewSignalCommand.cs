@@ -53,7 +53,6 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                 var cryptoPrice = await _binanceService.GetMarketPriceAsync(signal.Symbol, brokerAccount.Id);
                 if (cryptoPrice <= 0)
                 {
-                    Console.WriteLine($"****************SWMBOL {signal.Symbol} {cryptoPrice}");
                     await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, cryptoPrice, null, "HATA: FİYAT BİLGİSİ BULUNAMADI");
                     return new ErrorResult(Messages.Trading.PriceNotFound);
                 }
@@ -67,7 +66,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
 
                 if (lotSizeFilter == null || minNotionalFilter == null)
                 {
-                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.FilterNotFound);
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, null, Messages.Trading.FilterNotFound);
                     return new ErrorResult(Messages.Trading.FilterNotFound);
                 }
 
@@ -81,7 +80,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     var position = await _binanceService.GetCryptoPositionAsync(signal.Symbol, brokerAccount.Id);
                     if (position == null || position.Quantity <= 0)
                     {
-                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.FilterNotFound);
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, null, Messages.Trading.FilterNotFound);
                         return new ErrorResult(Messages.Trading.NoPositionToSell);
                     }
 
@@ -113,17 +112,17 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     }
 
 
-                    //if (sellQuantity < minQtySell)
-                    //{
-                    //    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), $"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
-                    //    return new ErrorResult($"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
-                    //}
+                    if (sellQuantity < minQtySell)
+                    {
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, Convert.ToInt32(sellQuantity), $"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
+                        return new ErrorResult($"⚠️ Yetersiz bakiye: {sellQuantity}. Minimum LOT_SIZE: {minQtySell}. Satış yapılamaz.");
+                    }
 
                     sellQuantity = Math.Floor(sellQuantity / stepSizeSell) * stepSizeSell;
 
                     if (sellQuantity * cryptoPrice < minNotionalSell)
                     {
-                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"⚠️ İşlem tutarı çok düşük. Minimum {minNotionalSell} USDT değerinde işlem yapılmalı.");
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, null, $"⚠️ İşlem tutarı çok düşük. Minimum {minNotionalSell} USDT değerinde işlem yapılmalı.");
                         return new ErrorResult($"⚠️ İşlem tutarı çok düşük. Minimum {minNotionalSell} USDT değerinde işlem yapılmalı.");
                     }
 
@@ -138,7 +137,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
 
                     if (!sellOrderResult)
                     {
-                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), Messages.Trading.OrderFailed);
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, Convert.ToInt32(sellQuantity), Messages.Trading.OrderFailed);
                         return new ErrorResult(Messages.Trading.OrderFailed);
                     }
 
@@ -147,7 +146,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                         $"✅ **Satış tamamlandı:** {signal.Symbol}, **Miktar:** {sellQuantity} USDT"
                     );
 
-                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(sellQuantity), Messages.General.Success);
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, Convert.ToInt32(sellQuantity), Messages.General.Success);
                     return new SuccessResult(Messages.General.Success);
                 }
 
@@ -157,7 +156,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                     var accountBalance = await _binanceService.GetAccountBalanceAsync(brokerAccount.Id);
                     if (accountBalance <= 0)
                     {
-                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.PriceNotFound);
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, null, Messages.Trading.PriceNotFound);
                         return new ErrorResult(Messages.Trading.PriceNotFound);
                     }
 
@@ -166,7 +165,8 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                         userTradingSettings.RiskPercentage,
                         cryptoPrice,
                         userTradingSettings.MaxRiskLimit,
-                        userTradingSettings.MaxBuyQuantity
+                        userTradingSettings.MaxBuyQuantity,
+                        userTradingSettings.MinBuyPrice
                     );
 
                     // **Binance LOT_SIZE uygunluğu kontrolü**
@@ -186,7 +186,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
 
                         if (minRequiredQty * cryptoPrice > accountBalance)
                         {
-                            await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"Yetersiz bakiye. Minimum {minNotional} USDT değerinde işlem yapılmalı.");
+                            await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, null, $"Yetersiz bakiye. Minimum {minNotional} USDT değerinde işlem yapılmalı.");
                             return new ErrorResult($"Yetersiz bakiye. Minimum {minNotional} USDT değerinde işlem yapılmalı.");
                         }
 
@@ -203,7 +203,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
 
                     if (!buyOrderResult)
                     {
-                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, Messages.Trading.OrderFailed);
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, null, Messages.Trading.OrderFailed);
                         return new ErrorResult(Messages.Trading.OrderFailed);
                     }
 
@@ -232,7 +232,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
 
                     if (!stopLossResult)
                     {
-                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(calculatedQuantity), Messages.Trading.StopLossOrderFailed);
+                        await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, Convert.ToInt32(calculatedQuantity), Messages.Trading.StopLossOrderFailed);
                         return new ErrorResult(Messages.Trading.StopLossOrderFailed);
                     }
 
@@ -240,13 +240,13 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
                         signal.UserId.ToString(),
                         $"🟢 Alım tamamlandı: {signal.Symbol}, Miktar: {calculatedQuantity} USDT. Stop-loss {stopLossPrice} olarak ayarlandı."
                     );
-                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, Convert.ToInt32(calculatedQuantity), Messages.General.Success);
+                    await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, Convert.ToInt32(calculatedQuantity), Messages.General.Success);
                     return new SuccessResult(Messages.General.Success);
                 }
             }
             catch (Exception ex)
             {
-                await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Action, signal.Symbol, null, null, $"{Messages.General.SystemError}: {ex.Message}");
+                await _binanceService.BinanceLog(signal.BrokerAccountId, signal.Symbol, signal.Action, null, null, $"{Messages.General.SystemError}: {ex.Message}");
                 return new ErrorResult($"{Messages.General.SystemError}: {ex.Message}");
             }
         }

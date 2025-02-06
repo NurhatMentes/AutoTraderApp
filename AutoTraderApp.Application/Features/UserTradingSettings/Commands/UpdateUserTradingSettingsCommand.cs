@@ -13,7 +13,7 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.Commands
     {
         public Guid UserId { get; set; }
         public string BrokerType { get; set; }
-        public UserTradingSettingsDto Settings { get; set; }
+        public UserTradingSettingsCreateDto Settings { get; set; }
     }
 
     public class UpdateUserTradingSettingsCommandHandler : IRequestHandler<UpdateUserTradingSettingsCommand, IResult>

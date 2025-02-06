@@ -11,6 +11,9 @@ namespace AutoTraderApp.Domain.Entities
     {
         public Guid UserId { get; set; }
         public User User { get; set; } = null!;
+        public Guid? BrokerAccountId { get; set; }
+        public BrokerAccount BrokerAccount { get; set; } = null!;
+
         public string BrokerType { get; set; }
 
         // Risk Yönetimi Parametreleri
@@ -26,6 +29,7 @@ namespace AutoTraderApp.Domain.Entities
         /// Risk yüzdesi hesaplamasından bağımsız olarak, tek bir işlemde riske edebilecekleri maksimum tutarı sınırlar.
         /// </summary>
         public decimal MaxRiskLimit { get; set; } = 2500;
+
 
         // Alım-Satım Parametreleri
 

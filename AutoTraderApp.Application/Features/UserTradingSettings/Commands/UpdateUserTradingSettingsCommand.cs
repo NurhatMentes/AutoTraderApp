@@ -3,16 +3,16 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using MediatR;
-using System.Threading.Tasks;
-using System.Threading;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AutoTraderApp.Application.Features.UserTradingSettings.Commands
 {
     public class UpdateUserTradingSettingsCommand : IRequest<IResult>
     {
         public Guid UserId { get; set; }
-        public string BrokerType { get; set; }
+        public Guid BrokerAccountId { get; set; }
         public UserTradingSettingsCreateDto Settings { get; set; }
     }
 
@@ -27,11 +27,10 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.Commands
 
         public async Task<IResult> Handle(UpdateUserTradingSettingsCommand request, CancellationToken cancellationToken)
         {
-            var settings = await _userTradingSettingsRepository.GetAsync(uts => uts.UserId == request.UserId && uts.BrokerType == request.BrokerType);
+            var settings = await _userTradingSettingsRepository.GetAsync(uts => uts.UserId == request.UserId && uts.BrokerAccountId == request.BrokerAccountId);
             if (settings == null)
                 return new ErrorResult("Kullanıcı ayarları bulunamadı.");
 
-            settings.BrokerType = request.BrokerType;
             settings.RiskPercentage = request.Settings.RiskPercentage;
             settings.MaxRiskLimit = request.Settings.MaxRiskLimit;
             settings.MinBuyQuantity = request.Settings.MinBuyQuantity;

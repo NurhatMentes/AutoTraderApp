@@ -85,29 +85,29 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             //**********//Hisse listeleri güncelleniyor && çağırılıyor//**********//
 
             // UpdateCombinedStockListCommand çalıştırılıyor
-            var updateResult = _mediator.Send(new UpdateCombinedStockListCommand()).Result;
-            if (!updateResult)
-            {
-                return new ErrorResult(Messages.General.Updated);
-            }
+            ////var updateResult = _mediator.Send(new UpdateCombinedStockListCommand()).Result;
+            //if (!updateResult)
+            //{
+            //    return new ErrorResult(Messages.General.Updated);
+            //}
 
-            var combinedStocks = _combinedStockRepository.GetAllAsync().Result;
-            if (combinedStocks == null || !combinedStocks.Any())
-            {
-                return new ErrorResult(Messages.General.DataNotFound);
-            }
+            //var combinedStocks = _combinedStockRepository.GetAllAsync().Result;
+            //if (combinedStocks == null || !combinedStocks.Any())
+            //{
+            //    return new ErrorResult(Messages.General.DataNotFound);
+            //}
 
-            var nasdaqStocks = _alphaVantageService.GetNasdaqListingsAsync(500).Result;
-            if (nasdaqStocks == null)
-            {
-                return new ErrorResult(Messages.General.DataNotFound);
-            }
+            //var nasdaqStocks = _alphaVantageService.GetNasdaqListingsAsync(500).Result;
+            //if (nasdaqStocks == null)
+            //{
+            //    return new ErrorResult(Messages.General.DataNotFound);
+            //}
 
-            var customStocks = _customStockRepository.GetAllAsync().Result;
-            if (customStocks == null)
-            {
-                return new ErrorResult(Messages.General.DataNotFound);
-            }
+            //var customStocks = _customStockRepository.GetAllAsync().Result;
+            //if (customStocks == null)
+            //{
+            //    return new ErrorResult(Messages.General.DataNotFound);
+            //}
 
             var cryptoCustomStocks = _cryptoCustomStockRepository.GetAllAsync().Result;
             if (cryptoCustomStocks == null)

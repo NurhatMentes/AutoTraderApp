@@ -115,7 +115,8 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
                         stopLoss,
                         userTradingSettings.MaxRiskLimit,
                         userTradingSettings.MinBuyQuantity,
-                        userTradingSettings.MaxBuyQuantity
+                        userTradingSettings.MaxBuyQuantity,
+                        userTradingSettings.MinBuyPrice
                     );
 
                     signalTotalCost = signal.Quantity * price;

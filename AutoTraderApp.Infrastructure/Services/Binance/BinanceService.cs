@@ -1079,5 +1079,68 @@ namespace AutoTraderApp.Infrastructure.Services.Binance
                 Quantity = asset.Free
             };
         }
+
+        public async Task<BinanceOrder?> GetActiveStopLossOrderAsync(Guid brokerAccountId, string symbol)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+            var requestBody = new Dictionary<string, string>
+            {
+                ["symbol"] = symbol.ToUpper().Trim(),
+                ["timestamp"] = timestamp
+            };
+
+            var queryString = string.Join("&", requestBody.Select(x => $"{x.Key}={Uri.EscapeDataString(x.Value)}"));
+
+            var brokerAccount = await GetBinanceAccountAsync(brokerAccountId);
+            if (brokerAccount == null) throw new Exception("Broker account not found");
+
+            var signature = GenerateSignature(queryString, brokerAccount.ApiSecret);
+            queryString += $"&signature={signature}";
+
+            var response = await httpClient.GetAsync($"/api/v3/openOrders?{queryString}");
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Binance API Error: {response.StatusCode} - {responseContent}");
+            }
+
+            var orders = JsonConvert.DeserializeObject<List<BinanceOrder>>(responseContent);
+            return orders?.FirstOrDefault(o => o.Type == "STOP_LOSS_LIMIT");
+        }
+
+        public async Task<bool> CancelOrderAsync(Guid brokerAccountId, string symbol, string orderId)
+        {
+            var httpClient = await ConfigureHttpClientAsync(brokerAccountId);
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+            var requestBody = new Dictionary<string, string>
+            {
+                ["symbol"] = symbol.ToUpper().Trim(),
+                ["orderId"] = orderId,
+                ["timestamp"] = timestamp
+            };
+
+            var queryString = string.Join("&", requestBody.Select(x => $"{x.Key}={Uri.EscapeDataString(x.Value)}"));
+
+            var brokerAccount = await GetBinanceAccountAsync(brokerAccountId);
+            if (brokerAccount == null) throw new Exception("Broker account not found");
+
+            var signature = GenerateSignature(queryString, brokerAccount.ApiSecret);
+            queryString += $"&signature={signature}";
+
+            var response = await httpClient.DeleteAsync($"/api/v3/order?{queryString}");
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Binance API Cancel Order Error: {response.StatusCode} - {responseContent}");
+            }
+
+            return true;
+        }
+
     }
 }

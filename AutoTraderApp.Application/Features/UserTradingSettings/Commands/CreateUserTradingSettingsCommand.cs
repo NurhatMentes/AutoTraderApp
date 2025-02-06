@@ -3,9 +3,6 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using MediatR;
-using System.Threading.Tasks;
-using System.Threading;
-using System;
 
 namespace AutoTraderApp.Application.Features.UserTradingSettings.Commands
 {
@@ -13,7 +10,7 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.Commands
     {
         public Guid UserId { get; set; }
         public string BrokerType { get; set; }
-        public UserTradingSettingsDto Settings { get; set; }
+        public UserTradingSettingsCreateDto Settings { get; set; }
     }
 
     public class CreateUserTradingSettingsCommandHandler : IRequestHandler<CreateUserTradingSettingsCommand, IResult>

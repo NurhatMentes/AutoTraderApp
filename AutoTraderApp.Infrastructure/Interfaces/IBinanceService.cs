@@ -35,6 +35,8 @@ namespace AutoTraderApp.Infrastructure.Interfaces
         Task<decimal> AdjustQuantityForBinance(string symbol, decimal requestedQuantity, decimal price, Guid brokerAccountId, bool isSellOrder);
         Task<BinancePosition?> GetCryptoPositionAsync(string symbol, Guid brokerAccountId);
         Task<bool> BinanceLog(Guid brokerAccountId, string symbol, string? Action, decimal? price, int? quantity, string msg);
+        Task<BinanceOrder?> GetActiveStopLossOrderAsync(Guid brokerAccountId, string symbol);
+        Task<bool> CancelOrderAsync(Guid brokerAccountId, string symbol, string orderId);
     }
 
 }

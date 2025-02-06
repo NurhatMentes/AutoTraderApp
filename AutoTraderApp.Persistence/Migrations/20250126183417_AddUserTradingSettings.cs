@@ -17,6 +17,7 @@ namespace AutoTraderApp.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BrokerType = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RiskPercentage = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     MaxRiskLimit = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     MinBuyQuantity = table.Column<int>(type: "int", nullable: false),

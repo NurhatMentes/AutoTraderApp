@@ -9,6 +9,7 @@ using AutoTraderApp.Infrastructure.Services.Alpaca;
 using AutoTraderApp.Infrastructure.Services.Automation.Playwrights;
 using AutoTraderApp.Infrastructure.Services.Binance;
 using AutoTraderApp.Infrastructure.Services.MarketData;
+using AutoTraderApp.Infrastructure.Services.OkxTr;
 using AutoTraderApp.Infrastructure.Services.Polygon;
 using AutoTraderApp.Infrastructure.Services.Telegram;
 using AutoTraderApp.Infrastructure.Services.TradingView;
@@ -112,6 +113,10 @@ namespace AutoTraderApp.Infrastructure.DependencyResolvers.Autofac
 
             // Binance
             builder.RegisterType<BinanceService>().As<IBinanceService>().InstancePerLifetimeScope();
+            builder.RegisterType<HttpClient>().SingleInstance();
+
+            // OKX TR
+            builder.RegisterType<OkxService>().As<IOkxService>().InstancePerLifetimeScope();
             builder.RegisterType<HttpClient>().SingleInstance();
         }
     }

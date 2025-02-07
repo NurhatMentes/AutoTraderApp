@@ -1,4 +1,5 @@
 ﻿using AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessTradingViewSignal;
+using AutoTraderApp.Application.Features.TradingView.Commands.OkxTrProcessTradingViewSignal;
 using AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradingViewSignal;
 using AutoTraderApp.Application.Features.TradingView.DTOs;
 using MediatR;
@@ -18,8 +19,8 @@ namespace AutoTraderApp.WebAPI.Controllers
             _mediator = mediator;
         }
 
-        [HttpPost("stock-webhook")]
-        public async Task<IActionResult> StockSignal([FromBody] TradingViewSignalDto signal)
+        [HttpPost("stock-alpaca")]
+        public async Task<IActionResult> StockAlpaca([FromBody] TradingViewSignalDto signal)
         {
             var result = await _mediator.Send(new StockProcessTradingViewSignalCommand { Signal = signal });
             if (result.Success)
@@ -28,10 +29,20 @@ namespace AutoTraderApp.WebAPI.Controllers
             return BadRequest(result);
         }
 
-        [HttpPost("crypto-webhook")]
-        public async Task<IActionResult> CryptoWebhook([FromBody] TradingViewCryptoSignalDto signal)
+        [HttpPost("crypto-binance")]
+        public async Task<IActionResult> CryptoBinance([FromBody] TradingViewCryptoSignalDto signal)
         {
             var result = await _mediator.Send(new CryptoProcessTradingViewSignalCommand { Signal = signal });
+            if (result.Success)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
+
+        [HttpPost("crypto-okx-tr")]
+        public async Task<IActionResult> CryptoOkxTr([FromBody] TradingViewCryptoSignalDto signal)
+        {
+            var result = await _mediator.Send(new OkxTrProcessTradingViewSignalCommand { Signal = signal });
             if (result.Success)
                 return Ok(result);
 

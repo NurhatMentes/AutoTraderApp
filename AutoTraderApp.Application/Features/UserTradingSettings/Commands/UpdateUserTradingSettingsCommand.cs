@@ -37,6 +37,7 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.Commands
             settings.MaxBuyQuantity = request.Settings.MaxBuyQuantity;
             settings.BuyPricePercentage = request.Settings.BuyPricePercentage;
             settings.SellPricePercentage = request.Settings.SellPricePercentage;
+            settings.MinBuyPrice = request.Settings.MinBuyPrice;
 
             await _userTradingSettingsRepository.UpdateAsync(settings);
             return new SuccessResult("Kullanıcı ayarları başarıyla güncellendi.");

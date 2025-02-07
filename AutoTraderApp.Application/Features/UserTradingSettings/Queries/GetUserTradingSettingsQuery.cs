@@ -32,15 +32,18 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.Queries
                 includes: new List<Expression<Func<UserTradingSetting, object>>> { uts => uts.BrokerAccount, uts => uts.User });
 
             return settingsList.Select(settings => new UserTradingSettingsDto
-            {
+            {       
+                Id = settings.Id,
                 UserName = settings.User.FirstName + " " + settings.User.LastName,
+                BrokerType = settings.BrokerType,
                 BrokerName = settings.BrokerAccount != null ? settings.BrokerAccount.BrokerName : "Broker mevcut değil", 
                 RiskPercentage = settings.RiskPercentage,
                 MaxRiskLimit = settings.MaxRiskLimit,
                 MinBuyQuantity = settings.MinBuyQuantity,
                 MaxBuyQuantity = settings.MaxBuyQuantity,
                 BuyPricePercentage = settings.BuyPricePercentage,
-                SellPricePercentage = settings.SellPricePercentage
+                SellPricePercentage = settings.SellPricePercentage,
+                MinBuyPrice = settings.MinBuyPrice
             }).ToList();
         }
     }

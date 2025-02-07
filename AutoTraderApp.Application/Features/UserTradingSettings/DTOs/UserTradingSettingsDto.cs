@@ -8,6 +8,7 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.DTOs
 {
     public class UserTradingSettingsDto
     {
+        public Guid Id { get; set; }
         public string UserName { get; set; }
         public string BrokerType { get; set; }
         public string BrokerName { get; set; }
@@ -17,5 +18,6 @@ namespace AutoTraderApp.Application.Features.UserTradingSettings.DTOs
         public int MaxBuyQuantity { get; set; }
         public decimal BuyPricePercentage { get; set; }
         public decimal SellPricePercentage { get; set; }
+        public decimal MinBuyPrice { get; set; }
     }
 }

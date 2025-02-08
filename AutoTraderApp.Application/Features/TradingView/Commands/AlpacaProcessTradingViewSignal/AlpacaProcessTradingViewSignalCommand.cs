@@ -8,19 +8,16 @@ using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Domain.ExternalModels.Alpaca.Models;
 using AutoTraderApp.Infrastructure.Interfaces;
 using MediatR;
-using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Threading;
 
-namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradingViewSignal
+namespace AutoTraderApp.Application.Features.TradingView.Commands.AlpacaProcessTradingViewSignal
 {
-    public class StockProcessTradingViewSignalCommand : IRequest<IResult>
+    public class AlpacaProcessTradingViewSignalCommand : IRequest<IResult>
     {
         public TradingViewSignalDto Signal { get; set; } = null!;
     }
 
-    public class ProcessTradingViewSignalCommandHandler : IRequestHandler<StockProcessTradingViewSignalCommand, IResult>
+    public class ProcessTradingViewSignalCommandHandler : IRequestHandler<AlpacaProcessTradingViewSignalCommand, IResult>
     {
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
         private readonly IBaseRepository<BrokerLog> _brokerLog;
@@ -51,7 +48,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTr
             _userTradingSetting = userTradingSetting;
         }
 
-        public async Task<IResult> Handle(StockProcessTradingViewSignalCommand request, CancellationToken cancellationToken)
+        public async Task<IResult> Handle(AlpacaProcessTradingViewSignalCommand request, CancellationToken cancellationToken)
         {
             var signal = request.Signal;
             var transactionId = Guid.NewGuid();

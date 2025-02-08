@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace AutoTraderApp.Application.Features.CryptoCustomStocks.Validators
 {
-    public class CreateCryptoCustomStockValidator : AbstractValidator<CreateCryptoCustomStockDto>
+    public class CreateCryptoCustomStockValidator : AbstractValidator<CreateBinanceCustomStockDto>
     {
         public CreateCryptoCustomStockValidator()
         {

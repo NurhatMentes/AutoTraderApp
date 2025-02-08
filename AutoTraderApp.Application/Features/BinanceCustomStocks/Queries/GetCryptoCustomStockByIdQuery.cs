@@ -12,9 +12,9 @@ namespace AutoTraderApp.Application.Features.CryptoCustomStocks.Queries
 
     public class GetCryptoCustomStockByIdQueryHandler : IRequestHandler<GetCryptoCustomStockByIdQuery, CryptoCustomStockDto>
     {
-        private readonly IBaseRepository<CryptoCustomStock> _repository;
+        private readonly IBaseRepository<BinanceCustomStock> _repository;
 
-        public GetCryptoCustomStockByIdQueryHandler(IBaseRepository<CryptoCustomStock> repository)
+        public GetCryptoCustomStockByIdQueryHandler(IBaseRepository<BinanceCustomStock> repository)
         {
             _repository = repository;
         }

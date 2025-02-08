@@ -1,10 +1,9 @@
-﻿using AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessTradingViewSignal;
+﻿using AutoTraderApp.Application.Features.TradingView.Commands.AlpacaProcessTradingViewSignal;
+using AutoTraderApp.Application.Features.TradingView.Commands.BinanceProcessTradingViewSignal;
 using AutoTraderApp.Application.Features.TradingView.Commands.OkxTrProcessTradingViewSignal;
-using AutoTraderApp.Application.Features.TradingView.Commands.StockProcessTradingViewSignal;
 using AutoTraderApp.Application.Features.TradingView.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace AutoTraderApp.WebAPI.Controllers
 {
@@ -22,7 +21,7 @@ namespace AutoTraderApp.WebAPI.Controllers
         [HttpPost("stock-alpaca")]
         public async Task<IActionResult> StockAlpaca([FromBody] TradingViewSignalDto signal)
         {
-            var result = await _mediator.Send(new StockProcessTradingViewSignalCommand { Signal = signal });
+            var result = await _mediator.Send(new AlpacaProcessTradingViewSignalCommand { Signal = signal });
             if (result.Success)
                 return Ok(result);
 
@@ -32,7 +31,7 @@ namespace AutoTraderApp.WebAPI.Controllers
         [HttpPost("crypto-binance")]
         public async Task<IActionResult> CryptoBinance([FromBody] TradingViewCryptoSignalDto signal)
         {
-            var result = await _mediator.Send(new CryptoProcessTradingViewSignalCommand { Signal = signal });
+            var result = await _mediator.Send(new BinanceProcessTradingViewSignalCommand { Signal = signal });
             if (result.Success)
                 return Ok(result);
 

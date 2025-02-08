@@ -5,19 +5,17 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Core.Utilities.Results;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
-using AutoTraderApp.Infrastructure.Services.Alpaca;
 using MediatR;
-using System.Diagnostics;
 using System.Globalization;
 
-namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessTradingViewSignal
+namespace AutoTraderApp.Application.Features.TradingView.Commands.BinanceProcessTradingViewSignal
 {
-    public class CryptoProcessTradingViewSignalCommand : IRequest<IResult>
+    public class BinanceProcessTradingViewSignalCommand : IRequest<IResult>
     {
         public TradingViewCryptoSignalDto Signal { get; set; } = null!;
     }
 
-    public class CryptoProcessTradingViewSignalCommandHandler : IRequestHandler<CryptoProcessTradingViewSignalCommand, IResult>
+    public class CryptoProcessTradingViewSignalCommandHandler : IRequestHandler<BinanceProcessTradingViewSignalCommand, IResult>
     {
         private readonly IBaseRepository<BrokerAccount> _brokerAccountRepository;
         private readonly IBinanceService _binanceService;
@@ -36,7 +34,7 @@ namespace AutoTraderApp.Application.Features.TradingView.Commands.CryptoProcessT
             _userTradingSetting = userTradingSetting;
         }
 
-        public async Task<IResult> Handle(CryptoProcessTradingViewSignalCommand request, CancellationToken cancellationToken)
+        public async Task<IResult> Handle(BinanceProcessTradingViewSignalCommand request, CancellationToken cancellationToken)
         {
             var signal = request.Signal;
 

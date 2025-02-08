@@ -43,7 +43,7 @@ namespace AutoTraderApp.WebAPI.Controllers
         {
             try
             {
-                var orders = await _okxService.GetActiveOrdersAsync(brokerAccountId);
+                var orders = await _okxService.GetOpenOrdersAsync(brokerAccountId, symbol);
                 return Ok(new SuccessDataResult<object>(orders, "OKX açık emirleri getirildi."));
             }
             catch (Exception ex)

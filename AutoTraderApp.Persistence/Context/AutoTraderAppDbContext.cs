@@ -33,7 +33,8 @@ namespace AutoTraderApp.Persistence.Context
         public DbSet<NasdaqStock> NasdaqStocks { get; set; }
         public DbSet<CustomStock> CustomStocks { get; set; }
         public DbSet<UserTradingSetting> UserTradingSettings { get; set; }
-        public DbSet<CryptoCustomStock> CryptoCustomStocks { get; set; }
+        public DbSet<BinanceCustomStock> BinanceCustomStocks { get; set; }
+        public DbSet<OkxCustomStock> OkxCustomStocks { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

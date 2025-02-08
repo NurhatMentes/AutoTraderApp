@@ -31,7 +31,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
         private readonly ITradingViewSeleniumService _tradingViewSeleniumService;
         private readonly IBaseRepository<NasdaqStock> _nasdaqStockRepository;
         private readonly IBaseRepository<CustomStock> _customStockRepository;
-        private readonly IBaseRepository<CryptoCustomStock> _cryptoCustomStockRepository;
+        private readonly IBaseRepository<BinanceCustomStock> _cryptoCustomStockRepository;
 
         public ApplyStrategyToMultipleStocksSyncCommandHandler(
             IBaseRepository<Strategy> strategyRepository,
@@ -45,7 +45,7 @@ namespace AutoTraderApp.Application.Features.Strategies.Commands.ApplyStrategyTo
             ITradingViewSeleniumService tradingViewSeleniumService,
             IBaseRepository<NasdaqStock> nasdaqStockRepository,
             IBaseRepository<CustomStock> customStockRepository,
-            IBaseRepository<CryptoCustomStock> cryptoCustomStockRepository)
+            IBaseRepository<BinanceCustomStock> cryptoCustomStockRepository)
         {
             _strategyRepository = strategyRepository;
             _automationService = automationService;

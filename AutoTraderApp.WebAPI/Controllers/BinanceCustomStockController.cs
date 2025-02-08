@@ -1,4 +1,4 @@
-﻿using AutoTraderApp.Application.Features.CryptoCustomStocks.Commands;
+﻿using AutoTraderApp.Application.Features.BinanceCustomStocks.Commands;
 using AutoTraderApp.Application.Features.CryptoCustomStocks.DTOs;
 using AutoTraderApp.Application.Features.CryptoCustomStocks.Queries;
 using MediatR;
@@ -9,11 +9,11 @@ namespace AutoTraderApp.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CryptoCustomStockController : BaseController
+    public class BinanceCustomStockController : BaseController
     {
         private readonly IMediator _mediator;
 
-        public CryptoCustomStockController(IMediator mediator)
+        public BinanceCustomStockController(IMediator mediator)
         {
             _mediator = mediator;
         }
@@ -31,15 +31,15 @@ namespace AutoTraderApp.WebAPI.Controllers
             var result = await _mediator.Send(new GetCryptoCustomStockByIdQuery { Id = id });
 
             if (result == null)
-                return NotFound("CryptoCustomStock bulunamadı");
+                return NotFound("BinanceCustomStock bulunamadı");
 
             return Ok(result);
         }
 
         [HttpPost("Create")]
-        public async Task<IActionResult> Create([FromBody] CreateCryptoCustomStockDto dto)
+        public async Task<IActionResult> Create([FromBody] CreateBinanceCustomStockDto dto)
         {
-            var command = new CreateCryptoCustomStockCommand { Dto = dto };
+            var command = new CreateBinanceCustomStockCommand { Dto = dto };
             var result = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetById), new { id = result }, result);
         }
@@ -47,11 +47,11 @@ namespace AutoTraderApp.WebAPI.Controllers
         [HttpPut("Update")]
         public async Task<IActionResult> Update([FromBody] UpdateCryptoCustomStockDto dto)
         {
-            var command = new UpdateCryptoCustomStockCommand { Dto = dto };
+            var command = new UpdateBinanceCustomStockCommand { Dto = dto };
             var result = await _mediator.Send(command);
 
             if (!result)
-                return NotFound("Güncelleme başarısız oldu. CryptoCustomStock bulunamadı.");
+                return NotFound("Güncelleme başarısız oldu. BinanceCustomStock bulunamadı.");
 
             return Ok("CryptoCustomStock başarıyla güncellendi");
         }
@@ -59,11 +59,11 @@ namespace AutoTraderApp.WebAPI.Controllers
         [HttpDelete("Delete/{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var command = new DeleteCryptoCustomStockCommand { Id = id };
+            var command = new DeleteBinanceCustomStockCommand { Id = id };
             var result = await _mediator.Send(command);
 
             if (!result)
-                return NotFound("Silinemedi. CryptoCustomStock bulunamadı.");
+                return NotFound("Silinemedi. BinanceCustomStock bulunamadı.");
 
             return Ok("CryptoCustomStock başarıyla silindi");
         }

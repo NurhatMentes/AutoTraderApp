@@ -1,6 +1,7 @@
 ﻿using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
 using AutoTraderApp.Infrastructure.Interfaces;
+using AutoTraderApp.Infrastructure.Services.Telegram;
 using Newtonsoft.Json;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -101,6 +102,14 @@ namespace AutoTraderApp.Infrastructure.Services.OkxTr
         public async Task<bool> PlaceOrderAsync(Guid brokerAccountId, string symbol, decimal quantity, string orderType, bool isMarginTrade)
         {
             var requestPath = "/api/v5/trade/order";
+
+
+            decimal minOrderSize = await GetMinOrderSize(symbol, brokerAccountId);
+            if (quantity < minOrderSize)
+            {
+                throw new Exception($"OKX işlem hatası: {symbol} için minimum işlem miktarı {minOrderSize} olmalıdır.");
+            }
+
             var body = JsonConvert.SerializeObject(new
             {
                 instId = symbol,
@@ -130,7 +139,7 @@ namespace AutoTraderApp.Infrastructure.Services.OkxTr
 
                     if (errorCode == "51008")
                     {
-                        throw new Exception("OKX işlem hatası: Yetersiz BTC bakiyesi nedeniyle emir başarısız oldu.");
+                        throw new Exception("OKX işlem hatası: Yetersiz bakiye nedeniyle emir başarısız oldu.");
                     }
                     else if (errorCode == "51004")
                     {
@@ -154,23 +163,72 @@ namespace AutoTraderApp.Infrastructure.Services.OkxTr
             }
         }
 
-
-        public async Task<bool> CancelOrderAsync(Guid brokerAccountId, string orderId)
+        public async Task<decimal> GetMinOrderSize(string symbol, Guid brokerAccountId)
         {
-            var requestPath = "/api/v5/trade/cancel-order";
-            var body = JsonConvert.SerializeObject(new { ordId = orderId });
-
-            var client = await ConfigureHttpClientAsync(brokerAccountId, "POST", requestPath, body);
-            var response = await client.PostAsync(requestPath, new StringContent(body, Encoding.UTF8, "application/json"));
+            var requestPath = "/api/v5/public/instruments?instType=SPOT";
+            var client = await ConfigureHttpClientAsync(brokerAccountId, "GET", requestPath);
+            var response = await client.GetAsync(requestPath);
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"OKX API Hatası: {response.StatusCode} - {responseContent}");
+                throw new Exception($"OKX API Hatası (Min Order Size): {response.StatusCode} - {responseContent}");
             }
 
-            return true;
+            dynamic data = JsonConvert.DeserializeObject(responseContent);
+            foreach (var instrument in data.data)
+            {
+                if (instrument.instId == symbol)
+                {
+                    return Convert.ToDecimal(instrument.minSz, CultureInfo.InvariantCulture);
+                }
+            }
+
+            throw new Exception($"OKX API hatası: {symbol} için minimum işlem büyüklüğü bulunamadı.");
         }
+
+
+        public async Task<bool> CancelOrderAsync(Guid brokerAccountId, string orderId, string symbol)
+        {
+            var requestPath = "/api/v5/trade/cancel-order";
+            var body = JsonConvert.SerializeObject(new { ordId = orderId, instId = symbol });
+
+            var client = await ConfigureHttpClientAsync(brokerAccountId, "POST", requestPath, body);
+            var request = new HttpRequestMessage(HttpMethod.Post, requestPath)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            };
+
+            var response = await client.SendAsync(request);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            await OkxLog(brokerAccountId, orderId, "Cancel Order", null, null, $"İptal Yanıtı: {responseContent}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+               Console.WriteLine("Admin",
+                    $"⚠️ OKX Emir İptali Başarısız! OrderID: {orderId} Yanıt: {responseContent}");
+                return false;
+            }
+
+            dynamic data = JsonConvert.DeserializeObject(responseContent);
+            bool success = data.code == "0";
+
+            if (success)
+            {
+                Console.WriteLine("Admin",
+                    $"✅ OKX Emir Başarıyla İptal Edildi! OrderID: {orderId}");
+            }
+            else
+            {
+                Console.WriteLine("Admin",
+                    $"❌ OKX Emir İptal Edilemedi! OrderID: {orderId} Yanıt: {responseContent}");
+            }
+
+            return success;
+        }
+
+
 
         public async Task<decimal> GetAccountBalanceAsync(Guid brokerAccountId, string currency = "USDT")
         {
@@ -277,8 +335,6 @@ namespace AutoTraderApp.Infrastructure.Services.OkxTr
             }
         }
 
-
-
         public async Task<List<object>> GetActiveOrdersAsync(Guid brokerAccountId)
         {
             var client = await ConfigureHttpClientAsync(brokerAccountId, "GET", "/api/v5/trade/orders-pending");
@@ -339,17 +395,16 @@ namespace AutoTraderApp.Infrastructure.Services.OkxTr
                     throw new Exception("OKX API beklenmedik formatta yanıt döndürdü.");
                 }
 
-                // ✅ **Sembolü bul ve sadece "available" (kullanılabilir) bakiyeyi al**
                 foreach (var asset in data.data[0].details)
                 {
-                    if (asset.ccy == symbol.Split('-')[0])  // Örn: "ALGO-USDT" -> "ALGO"
+                    if (asset.ccy == symbol.Split('-')[0]) 
                     {
                         decimal availableBalance = Convert.ToDecimal(asset.availBal, CultureInfo.InvariantCulture);
                         return availableBalance;
                     }
                 }
 
-                return 0; // ✅ **Eğer sembol hiç yoksa sıfır döndür**
+                return 0; 
             }
             catch (Exception ex)
             {
@@ -383,10 +438,8 @@ namespace AutoTraderApp.Infrastructure.Services.OkxTr
                 decimal minSize = Convert.ToDecimal(data.data[0].minSz, CultureInfo.InvariantCulture);
                 decimal tickSize = Convert.ToDecimal(data.data[0].lotSz, CultureInfo.InvariantCulture);
 
-                // ✅ **Lot büyüklüğüne göre yuvarlama**
                 decimal adjustedQuantity = Math.Floor(quantity / tickSize) * tickSize;
 
-                // ✅ **Min lot büyüklüğünün altına düşmesini engelle**
                 if (adjustedQuantity < minSize)
                 {
                     throw new Exception($"OKX lot büyüklüğü çok düşük: Minimum {minSize} işlem yapılabilir.");
@@ -400,6 +453,105 @@ namespace AutoTraderApp.Infrastructure.Services.OkxTr
             }
         }
 
+        public async Task<bool> PlaceTrailingStopOrderAsync(Guid brokerAccountId, string symbol, decimal quantity, decimal callbackRate)
+        {
+            var requestPath = "/api/v5/trade/order-algo";
 
+            var payload = new
+            {
+                instId = symbol,
+                tdMode = "cash",
+                side = "sell",
+                ordType = "move_order_stop",
+                sz = quantity.ToString(CultureInfo.InvariantCulture),
+                callbackRatio = (callbackRate / 100).ToString(CultureInfo.InvariantCulture)
+            };
+
+            var body = JsonConvert.SerializeObject(payload);
+
+            try
+            {
+                var client = await ConfigureHttpClientAsync(brokerAccountId, "POST", requestPath, body);
+                var request = new HttpRequestMessage(HttpMethod.Post, requestPath)
+                {
+                    Content = new StringContent(body, Encoding.UTF8, "application/json")
+                };
+
+                var response = await client.SendAsync(request);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                await OkxLog(brokerAccountId, symbol, "Trailing Stop Request", null, null,
+                    $"Request: {body}\nResponse: {responseContent}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return false;
+                }
+
+                dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
+                return jsonResponse.code == "0";
+            }
+            catch (Exception ex)
+            {
+                await OkxLog(brokerAccountId, symbol, "Trailing Stop", null, Convert.ToInt32(quantity),
+                    $"Hata: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<List<string>> GetOpenOrdersAsync(Guid brokerAccountId, string symbol)
+        {
+            var orderIds = new List<string>();
+
+            var normalOrders = await GetPendingOrdersAsync(brokerAccountId, symbol, "/api/v5/trade/orders-pending");
+            orderIds.AddRange(normalOrders);
+
+            var algoOrders = await GetPendingOrdersAsync(brokerAccountId, symbol, "/api/v5/trade/orders-algo-pending?ordType=move_order_stop&instId=" + symbol);
+            orderIds.AddRange(algoOrders);
+
+            if (orderIds.Count == 0)
+            {
+                Console.WriteLine($"⚠️ OKX Açık Emirler BOŞ! (Symbol: {symbol})");
+            }
+
+            return orderIds;
+        }
+
+        private async Task<List<string>> GetPendingOrdersAsync(Guid brokerAccountId, string symbol, string requestPath)
+        {
+            var client = await ConfigureHttpClientAsync(brokerAccountId, "GET", requestPath);
+            var request = new HttpRequestMessage(HttpMethod.Get, requestPath);
+            request.Headers.Add("Accept", "application/json");
+
+            var response = await client.SendAsync(request);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            await OkxLog(brokerAccountId, symbol, "Get Open Orders", null, null, $"API Yanıtı: {responseContent}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"OKX Açık Emirler API Hatası: {response.StatusCode} - {responseContent}");
+            }
+
+            dynamic data = JsonConvert.DeserializeObject(responseContent);
+            var orderIds = new List<string>();
+
+            // **Yanıt Kontrolü**
+            if (data == null || data.data == null)
+            {
+                Console.WriteLine($"❌ OKX Açık Emir Yanıtı Hatalı! (Symbol: {symbol}) Yanıt: {responseContent}");
+                return orderIds;
+            }
+
+            foreach (var order in data.data)
+            {
+                if (!string.IsNullOrEmpty(order.ordId.ToString()))
+                {
+                    orderIds.Add(order.ordId.ToString());
+                }
+            }
+
+            return orderIds;
+        }
     }
 }

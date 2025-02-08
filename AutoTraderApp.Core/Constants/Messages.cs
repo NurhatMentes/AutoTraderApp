@@ -79,6 +79,8 @@ public static class Messages
         public const string PriceNotFound = "Binance fiyat verisi alınamadı";
         public const string QuantityBelowMin = "İşlem için belirlenen miktar, minimum miktarın altında.";
         public const string StopLossOrderFailed = "Stop-Loss emri verilirken bir hata oluştu.";
+        public const string TrailingStopFailed = "Trailing Stop emri başarısız.";
+        public const string TrailingStopSuccess = "Trailing Stop emri başarıyla oluşturuldu.";
         public const string SymbolNotFound = "Sembol bilgisi bulunamadı.";
         public const string FilterNotFound = "Gerekli filtreler bulunamadı.";
     }

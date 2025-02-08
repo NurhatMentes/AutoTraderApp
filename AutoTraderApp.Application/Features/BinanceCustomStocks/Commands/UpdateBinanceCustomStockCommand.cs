@@ -3,23 +3,23 @@ using AutoTraderApp.Core.Utilities.Repositories;
 using AutoTraderApp.Domain.Entities;
 using MediatR;
 
-namespace AutoTraderApp.Application.Features.CryptoCustomStocks.Commands
+namespace AutoTraderApp.Application.Features.BinanceCustomStocks.Commands
 {
-    public class UpdateCryptoCustomStockCommand : IRequest<bool>
+    public class UpdateBinanceCustomStockCommand : IRequest<bool>
     {
         public UpdateCryptoCustomStockDto Dto { get; set; }
     }
 
-    public class UpdateCryptoCustomStockCommandHandler : IRequestHandler<UpdateCryptoCustomStockCommand, bool>
+    public class UpdateCryptoCustomStockCommandHandler : IRequestHandler<UpdateBinanceCustomStockCommand, bool>
     {
-        private readonly IBaseRepository<CryptoCustomStock> _repository;
+        private readonly IBaseRepository<BinanceCustomStock> _repository;
 
-        public UpdateCryptoCustomStockCommandHandler(IBaseRepository<CryptoCustomStock> repository)
+        public UpdateCryptoCustomStockCommandHandler(IBaseRepository<BinanceCustomStock> repository)
         {
             _repository = repository;
         }
 
-        public async Task<bool> Handle(UpdateCryptoCustomStockCommand request, CancellationToken cancellationToken)
+        public async Task<bool> Handle(UpdateBinanceCustomStockCommand request, CancellationToken cancellationToken)
         {
             var stock = await _repository.GetByIdAsync(request.Dto.Id);
             if (stock == null) return false;
